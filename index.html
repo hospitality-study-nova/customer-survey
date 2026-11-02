@@ -715,7 +715,7 @@ var STEPS=[
    q("How often do you go to [PLACE]?",choice("freq","single",FREQ,{style:"chips"}))+
    '<p class="bh">Your last visit</p>'+
    q("How long did you stay on your last visit?",choice("nights","single",NIGHTS,{style:"chips"}))+
-   q("Who did you travel with on your last visit?",choice("with","single",WITH,{style:"chips"}));},
+   q("Who did you travel with on your last visit?",choice("with","single",WITH,{style:"chips",rand:true}));},
   valid:function(){return !!A.with&&!!A.nights&&!!A.freq;}},
  {id:"reason",stage:1,
   html:function(){var list=VERTS.map(function(v){return {k:v.k,l:v.l,d:v.d};}).concat([{k:"other",l:"Something else",d:"Tell us what",icon:"other",fixed:true}]);
@@ -983,7 +983,7 @@ function payload(extra){
    program_built:{enter:bn("enter"),earn:bn("earn"),level_up:bn("level"),benefits:BSLOTS.map(function(x){return bn(x);}).filter(function(x){return x&&x!=="Not needed";})},
    loyalty_memberships:(A.clubs||[]).map(function(k){return nameOf(CLUBS,k);}),
    wtp_hotel_room_two_breakfast:A.wtpRoom||null,wtp_dinner_pp_drinks:A.wtpDin||null,
-   open_anything_missing:A.open2||null};
+   open_anything_missing:A.open2||null,presented_order:S.order};
   if(extra)for(var k in extra)p[k]=extra[k];
   return p;
 }
