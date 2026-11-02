@@ -57,25 +57,36 @@ h2{font-size:1.6rem;font-weight:800}
 h3{font:700 1.02rem/1.4 var(--f);margin:0 0 12px;letter-spacing:-.015em}
 .sub{color:var(--muted);margin:0 0 4px;max-width:58ch;font-weight:500}
 .q{margin:26px 0 0}
-.rdemo{margin:18px 0 4px;pointer-events:none}
+.rdemo{position:relative;margin:18px 0 4px;pointer-events:none}
+.rdemo .rd-in{transition:opacity .45s,filter .45s}
+.rdemo.done .rd-in{opacity:.4;filter:grayscale(1)}
 .rdemo .tray{justify-content:center}
 .rdemo .rlist{margin-top:10px}
-.rdemo .rrow{height:56px;min-height:0;opacity:0;animation-duration:5.5s;animation-delay:.3s;animation-fill-mode:forwards;animation-timing-function:ease-in-out}
-.rdemo .rrow.r1{animation-name:rdR1}.rdemo .rrow.r2{animation-name:rdR2,rdFl}.rdemo .rrow.r3{animation-name:rdR3,rdFl}
-.rdemo .tok{animation:rdT1 5.5s .3s ease-in-out forwards}.rdemo .tok.t2{animation-name:rdT2}.rdemo .tok.t3{animation-name:rdT3}
-.rdemo .swap{display:grid}.rdemo .swap b{grid-area:1/1;align-self:center}
-.rdemo .swap .a{animation:rdOut 5.5s .3s forwards}.rdemo .swap .b{opacity:0;animation:rdIn 5.5s .3s forwards}
-.rdemo .r1 .swap .a{animation:none}
+.rdemo .rrow{height:56px;min-height:0;opacity:0;animation-duration:6s;animation-delay:.3s;animation-fill-mode:forwards;animation-timing-function:ease-in-out}
+.rdemo .rrow.r1{animation-name:rdR1}.rdemo .rrow.r2{animation-name:rdR2,rdM2}.rdemo .rrow.r3{animation-name:rdR3,rdM3;z-index:2}
+.rdemo .tok{animation:rdT1 6s .3s ease-in-out forwards}.rdemo .tok.t2{animation-name:rdT2}.rdemo .tok.t3{animation-name:rdT3}
+.rdemo .nn{display:grid;flex:none}.rdemo .nn .n{grid-area:1/1}
+.rdemo .nn .a{animation:rdNa 6s .3s forwards}.rdemo .nn .b{opacity:0;animation:rdNb 6s .3s forwards}.rdemo .r1 .nn .a{animation:none}
+.rdemo .r3 .grip{position:relative}
+.rdemo .r3 .grip::after{content:"";position:absolute;left:50%;top:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:rgba(18,21,26,.2);opacity:0;animation:rdF 6s .3s forwards}
+.rd-replay{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;box-shadow:0 6px 20px rgba(0,0,0,.14);cursor:pointer;padding:0;opacity:0;pointer-events:none;transition:opacity .3s}
+.rd-replay svg{width:26px;height:26px}
+.rdemo.done .rd-replay{opacity:1;pointer-events:auto}
 @keyframes rdT1{0%,7%{opacity:1;transform:scale(1)}9%{transform:scale(.92)}12%{transform:scale(1);opacity:1}16%,100%{opacity:.28}}
 @keyframes rdT2{0%,25%{opacity:1;transform:scale(1)}27%{transform:scale(.92)}30%{transform:scale(1);opacity:1}34%,100%{opacity:.28}}
 @keyframes rdT3{0%,43%{opacity:1;transform:scale(1)}45%{transform:scale(.92)}48%{transform:scale(1);opacity:1}52%,100%{opacity:.28}}
 @keyframes rdR1{0%,12%{opacity:0;transform:translateY(-8px)}20%,100%{opacity:1;transform:none}}
 @keyframes rdR2{0%,30%{opacity:0;transform:translateY(-8px)}38%,100%{opacity:1;transform:none}}
 @keyframes rdR3{0%,48%{opacity:0;transform:translateY(-8px)}56%,100%{opacity:1;transform:none}}
-@keyframes rdFl{0%,68%{background:var(--accent-soft)}72%{background:var(--surface)}82%,100%{background:var(--accent-soft)}}
-@keyframes rdOut{0%,70%{opacity:1}76%,100%{opacity:0}}
-@keyframes rdIn{0%,70%{opacity:0}76%,100%{opacity:1}}
-@media (prefers-reduced-motion:reduce){.rdemo .tok{animation:none;opacity:.28}.rdemo .rrow{animation:none;opacity:1}.rdemo .swap .a{opacity:0}.rdemo .r1 .swap .a{opacity:1}.rdemo .swap .b{animation:none;opacity:1}}
+@keyframes rdM2{0%,66%{transform:none}80%,100%{transform:translateY(62px)}}
+@keyframes rdM3{0%,64%{transform:none;box-shadow:none;background:var(--accent-soft)}67%{transform:none;box-shadow:0 10px 28px rgba(0,0,0,.2);background:var(--surface)}80%{transform:translateY(-62px);box-shadow:0 10px 28px rgba(0,0,0,.2);background:var(--surface)}84%,100%{transform:translateY(-62px);box-shadow:none;background:var(--accent-soft)}}
+@keyframes rdF{0%,62%{opacity:0;transform:scale(.6)}67%{opacity:1;transform:scale(1)}80%{opacity:1}84%,100%{opacity:0}}
+@keyframes rdNa{0%,78%{opacity:1}84%,100%{opacity:0}}
+@keyframes rdNb{0%,78%{opacity:0}84%,100%{opacity:1}}
+.rdemo.static .tok{animation:none;opacity:.28}.rdemo.static .rrow{animation:none;opacity:1}
+.rdemo.static .r2{transform:translateY(62px)}.rdemo.static .r3{transform:translateY(-62px)}
+.rdemo.static .nn .a{animation:none;opacity:0}.rdemo.static .r1 .nn .a{opacity:1}.rdemo.static .nn .b{animation:none;opacity:1}
+.rdemo.static .r3 .grip::after{display:none}
 .hint{color:var(--muted);font-size:.9rem;margin:-6px 0 12px}
 .defbox .dh{display:block;margin-top:4px;font-size:.85rem}
 .ihint{display:flex;align-items:center;gap:8px;margin:10px 0 0;color:var(--muted);font-size:.85rem;font-weight:600}
@@ -753,16 +764,17 @@ var STEPS=[
   valid:function(){return !!A.entry&&(A.entry!=="other"||(A.entryOther||"").trim().length>1);}},
  {id:"demo",stage:1,nav:"Continue",
   html:function(){
-   if(!S.demoSeen&&!S.demoTimer){var rm=false;try{rm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;}catch(e){}
-    S.demoTimer=setTimeout(function(){S.demoTimer=0;S.demoSeen=true;if(S.cur==="demo"&&!S.end)updateNav();},rm?400:5900);}
+   var rm=false;try{rm=!!(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches);}catch(e){}
+   var play=(!S.demoSeen||S.demoReplay)&&!rm;S.demoReplay=false;
+   if((!S.demoSeen||play)&&!S.demoTimer){S.demoTimer=setTimeout(function(){S.demoTimer=0;S.demoSeen=true;var d=document.querySelector(".rdemo");if(d)d.classList.add("done");if(S.cur==="demo"&&!S.end)updateNav();},rm?300:6400);}
    function tok(c,n){return '<span class="tok '+c+'">'+ib("other","ti")+'<span class="tl"><span>'+n+'</span></span></span>';}
-   function row(c,i,a,b){return '<div class="rrow '+c+'"><span class="n">'+i+'</span>'+ib("other","ti")+'<span class="rt swap"><b class="a">'+a+'</b>'+(b?'<b class="b">'+b+'</b>':'')+'</span><span class="grip">'+ic("grip")+'</span></div>';}
+   function row(c,a,b,n){return '<div class="rrow '+c+'"><span class="nn"><span class="n a">'+a+'</span>'+(b?'<span class="n b">'+b+'</span>':'')+'</span>'+ib("other","ti")+'<span class="rt"><b>'+n+'</b></span><span class="grip">'+ic("grip")+'</span></div>';}
    return '<h2>How the ranking works</h2><p class="sub">Next, you will rank some options by how important they are to you. Here is a quick example with A, B and C.</p>'+
-   '<div class="rdemo" aria-hidden="true"><div class="tray">'+tok("t1","A")+tok("t2","B")+tok("t3","C")+'</div>'+
+   '<div class="rdemo'+(play?'':' static done')+'"><div class="rd-in" aria-hidden="true"><div class="tray">'+tok("t1","A")+tok("t2","B")+tok("t3","C")+'</div>'+
    '<div class="rhead"><span class="traylabel" style="margin:0">Your ranking</span></div>'+
-   '<div class="rlist">'+row("r1",1,"A")+row("r2",2,"B","C")+row("r3",3,"C","B")+'</div></div>'+
-   '<p class="hint" style="margin-top:14px">Tap the options in order of importance, the most important first. You can then drag them to change the order.</p>'+
-   '<p style="text-align:center;margin:4px 0 0"><button type="button" class="btn" data-replay="1">Watch again</button></p>';},
+   '<div class="rlist">'+row("r1",1,0,"A")+row("r2",2,3,"B")+row("r3",3,2,"C")+'</div></div>'+
+   '<button type="button" class="rd-replay" data-replay="1" aria-label="Watch again"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button></div>'+
+   '<p class="hint" style="margin-top:14px">Tap the options in order of importance, the most important first. You can then drag them to change the order.</p>';},
   valid:function(){return !!S.demoSeen;}},
  {id:"rank",stage:1,
   html:function(){var n=rankItems("rank").length;return '<h2>On your last visit to '+esc(place())+', what mattered most to you?</h2>'+(A.entry&&A.entry!=="other"?'<p class="sub">Your main reason is already first. Add the rest.</p>':'')+rankUI("rank");},
@@ -952,7 +964,7 @@ document.addEventListener("click",function(e){
   var t=e.target;
   if(!S.end&&S.langOk&&stepById(S.cur)&&stepById(S.cur).ms&&t.closest&&t.closest("#main")){clearTimeout(S.msT);go(1);return;}
   if(t.id==="retry"){S.sub=null;render();return;}
-  if(t.closest&&t.closest("[data-replay]")){render(true);return;}
+  if(t.closest&&t.closest("[data-replay]")){clearTimeout(S.demoTimer);S.demoTimer=0;S.demoReplay=true;render(true);return;}
   var tk=t.closest&&t.closest("[data-task]");
   if(tk){var TT=taskById(tk.getAttribute("data-task"));enter(TT.steps[0],1);render();window.scrollTo(0,0);return;}
   if(t.closest&&t.closest("#finish")){if(reqDone()){enter("open",1);render();window.scrollTo(0,0);}return;}
