@@ -145,13 +145,9 @@ sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_IN"&&!ST.user)boot();});
 
 function shell(){
   app.innerHTML='<header class="top"><div class="wrap"><div class="bar"><h1>Customer Survey<small>Private team area</small></h1>'+
-   '<button class="btn pri sm" id="clink">Copy questionnaire link</button><button class="btn sm" id="shr">Share</button><a class="btn sm" id="opn" href="'+esc(formUrl())+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Open</a><button class="btn sm" id="out">Sign out</button></div>'+
+   '<button class="btn pri sm" id="clink">Copy questionnaire link</button><button class="btn sm" id="out">Sign out</button></div>'+
    '<nav class="tabs"><button data-t="overview">Overview</button><button data-t="responses">Responses</button><button data-t="texts">Survey</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
   qs("#clink").onclick=function(){copyText(formUrl(),this);};
-  qs("#shr").onclick=function(){
-    if(navigator.share){navigator.share({title:"Holiday & leisure in Portugal",text:shareMsg()}).catch(function(){});}
-    else window.open("https://wa.me/?text="+encodeURIComponent(shareMsg()),"_blank");
-  };
   qs("#out").onclick=function(){sb.auth.signOut().then(function(){ST.user=null;ST.loaded=false;loginView();});};
   Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.onclick=function(){ST.tab=b.getAttribute("data-t");if(ST.tab!=="texts")ST.unlocked=false;paint();};});
   paint();
