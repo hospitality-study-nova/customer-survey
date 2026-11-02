@@ -57,24 +57,25 @@ h2{font-size:1.6rem;font-weight:800}
 h3{font:700 1.02rem/1.4 var(--f);margin:0 0 12px;letter-spacing:-.015em}
 .sub{color:var(--muted);margin:0 0 4px;max-width:58ch;font-weight:500}
 .q{margin:26px 0 0}
-.rdemo{margin:22px 0 4px;padding:16px;border:1px solid var(--line);border-radius:20px;background:var(--panel)}
-.rd-tray{display:flex;gap:10px;justify-content:center;margin-bottom:14px}
-.rd-tok{min-width:68px;padding:11px 18px;text-align:center;font-weight:800;border:1px solid var(--line);border-radius:14px;background:var(--surface);animation:rdT1 10s ease-in-out infinite}
-.rd-tok.t2{animation-name:rdT2}.rd-tok.t3{animation-name:rdT3}
-.rd-lab{margin:0 0 8px;font-weight:700;font-size:.85rem;color:var(--muted)}
-.rd-list{position:relative;height:180px}
-.rd-slot{position:absolute;left:0;right:0;height:52px;border:1px dashed var(--line);border-radius:14px;background:rgba(255,255,255,.5)}
-.rd-slot.s2{top:64px}.rd-slot.s3{top:128px}
-.rd-slot b{position:absolute;left:12px;top:50%;margin-top:-13px;width:26px;height:26px;border-radius:50%;background:var(--tint);color:var(--ink);display:grid;place-items:center;font:800 .8rem var(--f)}
-.rd-it{position:absolute;left:50px;right:8px;height:44px;display:flex;align-items:center;padding:0 16px;font-weight:800;border:1px solid var(--line);border-radius:12px;background:var(--surface);opacity:0}
-.rd-it.i1{top:4px;animation:rdI1 10s ease-in-out infinite}.rd-it.i2{top:68px;animation:rdI2 10s ease-in-out infinite}.rd-it.i3{top:132px;animation:rdI3 10s ease-in-out infinite}
-@keyframes rdT1{0%,7%{opacity:1;transform:scale(1)}9%{transform:scale(.92)}12%{transform:scale(1);opacity:1}15%,93%{opacity:.28}98%,100%{opacity:1}}
-@keyframes rdT2{0%,23%{opacity:1;transform:scale(1)}25%{transform:scale(.92)}28%{transform:scale(1);opacity:1}31%,93%{opacity:.28}98%,100%{opacity:1}}
-@keyframes rdT3{0%,39%{opacity:1;transform:scale(1)}41%{transform:scale(.92)}44%{transform:scale(1);opacity:1}47%,93%{opacity:.28}98%,100%{opacity:1}}
-@keyframes rdI1{0%,12%{opacity:0;transform:translateY(-10px)}16%,93%{opacity:1;transform:none}97%,100%{opacity:0}}
-@keyframes rdI2{0%,28%{opacity:0;transform:translateY(-10px)}32%,62%{opacity:1;transform:none}70%,93%{opacity:1;transform:translateY(64px)}97%,100%{opacity:0;transform:translateY(64px)}}
-@keyframes rdI3{0%,44%{opacity:0;transform:translateY(-10px)}48%,62%{opacity:1;transform:none}70%,93%{opacity:1;transform:translateY(-64px)}97%,100%{opacity:0;transform:translateY(-64px)}}
-@media (prefers-reduced-motion:reduce){.rd-tok{animation:none;opacity:.28}.rd-it{animation:none;opacity:1}.rd-it.i2{transform:translateY(64px)}.rd-it.i3{transform:translateY(-64px)}}
+.rdemo{margin:18px 0 4px;pointer-events:none}
+.rdemo .tray{justify-content:center}
+.rdemo .rlist{margin-top:10px}
+.rdemo .rrow{height:56px;min-height:0;opacity:0;animation-duration:5.5s;animation-delay:.3s;animation-fill-mode:forwards;animation-timing-function:ease-in-out}
+.rdemo .rrow.r1{animation-name:rdR1}.rdemo .rrow.r2{animation-name:rdR2,rdFl}.rdemo .rrow.r3{animation-name:rdR3,rdFl}
+.rdemo .tok{animation:rdT1 5.5s .3s ease-in-out forwards}.rdemo .tok.t2{animation-name:rdT2}.rdemo .tok.t3{animation-name:rdT3}
+.rdemo .swap{display:grid}.rdemo .swap b{grid-area:1/1;align-self:center}
+.rdemo .swap .a{animation:rdOut 5.5s .3s forwards}.rdemo .swap .b{opacity:0;animation:rdIn 5.5s .3s forwards}
+.rdemo .r1 .swap .a{animation:none}
+@keyframes rdT1{0%,7%{opacity:1;transform:scale(1)}9%{transform:scale(.92)}12%{transform:scale(1);opacity:1}16%,100%{opacity:.28}}
+@keyframes rdT2{0%,25%{opacity:1;transform:scale(1)}27%{transform:scale(.92)}30%{transform:scale(1);opacity:1}34%,100%{opacity:.28}}
+@keyframes rdT3{0%,43%{opacity:1;transform:scale(1)}45%{transform:scale(.92)}48%{transform:scale(1);opacity:1}52%,100%{opacity:.28}}
+@keyframes rdR1{0%,12%{opacity:0;transform:translateY(-8px)}20%,100%{opacity:1;transform:none}}
+@keyframes rdR2{0%,30%{opacity:0;transform:translateY(-8px)}38%,100%{opacity:1;transform:none}}
+@keyframes rdR3{0%,48%{opacity:0;transform:translateY(-8px)}56%,100%{opacity:1;transform:none}}
+@keyframes rdFl{0%,68%{background:var(--accent-soft)}72%{background:var(--surface)}82%,100%{background:var(--accent-soft)}}
+@keyframes rdOut{0%,70%{opacity:1}76%,100%{opacity:0}}
+@keyframes rdIn{0%,70%{opacity:0}76%,100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.rdemo .tok{animation:none;opacity:.28}.rdemo .rrow{animation:none;opacity:1}.rdemo .swap .a{opacity:0}.rdemo .r1 .swap .a{opacity:1}.rdemo .swap .b{animation:none;opacity:1}}
 .hint{color:var(--muted);font-size:.9rem;margin:-6px 0 12px}
 .defbox .dh{display:block;margin-top:4px;font-size:.85rem}
 .ihint{display:flex;align-items:center;gap:8px;margin:10px 0 0;color:var(--muted);font-size:.85rem;font-weight:600}
@@ -506,6 +507,7 @@ Object.assign(PTD,{"Four quick things about you.":"Quatro perguntas rápidas sob
 Object.assign(PTD,{"Family, kids under 12":"Família, filhos com menos de 12 anos","Family, kids 12 to 17":"Família, filhos dos 12 aos 17 anos"});
 Object.assign(PTD,{"Copy link":"Copiar link"});
 Object.assign(PTD,{"Which of these situations applies to you?": "Qual destas situações se aplica a si?", "I have Portuguese nationality and live in Portugal": "Tenho nacionalidade portuguesa e vivo em Portugal", "I have Portuguese nationality and live abroad": "Tenho nacionalidade portuguesa e vivo no estrangeiro", "I do not have Portuguese nationality and live in Portugal": "Não tenho nacionalidade portuguesa e vivo em Portugal", "I do not have Portuguese nationality and live abroad": "Não tenho nacionalidade portuguesa e vivo no estrangeiro", "Are you part of any loyalty program (free or paid)? If so, which activities is it linked to?": "Faz parte de algum programa de fidelização (gratuito ou pago)? Se sim, a que atividades está associado?", "Select all that apply.": "Selecione todas as que se aplicam.", "What is a loyalty program?": "O que é um programa de fidelização?", "A program where a brand rewards you for coming back, with things like points, discounts, status levels or special perks. It can be free or paid.": "Um programa em que uma marca lhe oferece recompensas por voltar, como pontos, descontos, níveis de estatuto ou vantagens especiais. Pode ser gratuito ou pago.", "Where did you go the most?": "Onde foi mais vezes?", "Think about the last 3 years. If you went on holiday to any of these places in Portugal, choose the one you went to most often. We will then ask about your last visit there.": "Pense nos últimos 3 anos. Se foi de férias a algum destes locais em Portugal, escolha aquele a que foi mais vezes. Depois perguntamos pela sua última visita lá.", "The place I went to most often": "O local a que fui mais vezes", "I did not go to any of these places": "Não fui a nenhum destes locais", "Where did you go instead?": "Onde foi, então?", "If you did not go to any of those places, tell us where you went most often in the last 3 years, in Portugal or abroad. We will then ask about your last visit there.": "Se não foi a nenhum destes locais, diga-nos onde foi mais vezes nos últimos 3 anos, em Portugal ou no estrangeiro. Depois perguntamos pela sua última visita lá.", "Where did you go most often on holiday": "Onde foi mais vezes de férias", "Think about the last time you were there, and the experience you had.": "Pense na última vez que lá esteve e na experiência que teve.", "Every three years or less often": "De três em três anos ou com menos frequência", "As a couple": "Em casal", "With a club or similar": "Com um clube ou algo semelhante", "Alone": "Sozinho/a", "Under 18": "Menos de 18 anos", "18 to 24": "18 a 24 anos", "25 to 34": "25 a 34 anos", "35 to 44": "35 a 44 anos", "45 to 54": "45 a 54 anos", "55 to 64": "55 a 64 anos", "65 or older": "65 anos ou mais", "Click or drag your options, from the most important (top) to the least important (bottom)": "Clique ou arraste as opções, da mais importante (topo) à menos importante (fundo)", "Which mechanisms matter most to you?": "Que mecanismos são mais importantes para si?", "Which benefits matter most to you?": "Que benefícios são mais importantes para si?", "Local": "Local", "Regional": "Regional", "Where do you want the program to reach?": "Até onde quer que o programa chegue?", "How the ranking works": "Como funciona o ranking", "Next, you will rank some options by how important they are to you. Here is a quick example with A, B and C.": "A seguir, vai ordenar algumas opções pela importância que têm para si. Aqui fica um exemplo rápido com A, B e C.", "Tap the options in order of importance, the most important first. You can then drag them to change the order.": "Toque nas opções por ordem de importância, da mais importante para a menos importante. Depois pode arrastá-las para mudar a ordem.", "I am happy to take part. I understand it is voluntary and anonymous.": "Aceito participar. Sei que a participação é voluntária e anónima.", "Welcome to your holidays in Portugal loyalty program": "Bem-vindo/a ao seu programa de fidelização para férias em Portugal", "Drop here": "Solte aqui", "Drop your first choice here": "Solte aqui a sua primeira escolha", "All placed. Tap one in the list to take it back, or drag to change the order.": "Todas colocadas. Toque numa opção da lista para a retirar ou arraste para mudar a ordem.", "Choose the one you would most like to include.": "Escolha o benefício que mais gostaria de incluir.", "Is there anything you value that we have not asked about?": "Há algo que valorize e sobre o qual não perguntámos?", "Next, you design your ideal loyalty program.": "A seguir, vai desenhar o seu programa de fidelização ideal.", "Start free, pay for more": "Comece grátis e pague por mais", "Rewarded for years as a member": "Recompensa pelos anos como membro", "Recognised for owning a property": "Reconhecimento por ser proprietário", "I do not mind how I earn rewards": "Não me importa como ganho recompensas", "One level is fine": "Basta-me um só nível", "Earn points whenever you spend money, then redeem them for rewards.": "Ganhe pontos sempre que gastar dinheiro e depois troque-os por recompensas.", "Earn points whenever you spend money, then redeem them for rewards such as nights, meals or experiences, a bit like a card with rewards.": "Ganhe pontos sempre que gastar dinheiro e depois troque-os por recompensas, como noites, refeições ou experiências, um pouco como um cartão com recompensas.", "Priority and exclusive services, which is about priority and personal service and not only about saving time.": "Serviços prioritários e exclusivos, que se centram no serviço prioritário e pessoal e não apenas em poupar tempo.", "Priority and exclusive services, which is about personal and priority service wherever you are, not reserved places. A simple way to remember: services are how you are looked after, experiences and spaces are where you can go and what you can attend.": "Serviços prioritários e exclusivos, que se centram no serviço pessoal e prioritário onde quer que esteja, e não em locais reservados. Para fixar: os serviços são a forma como é tratado; as experiências e os espaços são os sítios aonde pode ir e os eventos a que pode assistir.", "Exclusive experiences and spaces, which is about events and places reserved for members. A simple way to remember: services are how you are looked after, experiences and spaces are where you can go and what you can attend.": "Experiências e espaços exclusivos, que se centram em eventos e locais reservados a membros. Para fixar: os serviços são a forma como é tratado; as experiências e os espaços são os sítios aonde pode ir e os eventos a que pode assistir.", "Exclusive experiences and spaces, where the point is reserved access and not meeting other members.": "Experiências e espaços exclusivos, em que o essencial é o acesso reservado e não conhecer outros membros.", "Access to events (for example, tickets to a sports event), experiences or areas reserved for members. It is about where you can go and what you can attend.": "Acesso a eventos (por exemplo, bilhetes para um evento desportivo), experiências ou zonas reservadas a membros. Diz respeito aos sítios aonde pode ir e aos eventos a que pode assistir.", "Services such as priority reservations or a dedicated concierge. It is personal and priority service that regular guests do not get, and it is about how you are looked after.": "Serviços como reservas prioritárias ou um concierge dedicado. É um serviço pessoal e prioritário que os clientes normais não têm e diz respeito à forma como é tratado.", "Convenience, like faster check-in or complimentary parking. Small perks that save you time and hassle during your stay.": "Conveniência, como um check-in mais rápido ou estacionamento gratuito. Pequenas vantagens que lhe poupam tempo e complicações durante a estadia.", "Artificial intelligence that suggests activities and recommends services. It helps you plan and decide by finding options and answering your questions.": "Inteligência artificial que sugere atividades e recomenda serviços. Ajuda a planear e a decidir, encontrando opções e respondendo às suas perguntas.", "Donating to a local community or an environmental cause. You can turn part of your value into positive impact, or be rewarded for making sustainable choices.": "Doar a uma comunidade local ou a uma causa ambiental. Pode converter parte do seu valor em impacto positivo ou receber recompensas por fazer escolhas sustentáveis."});
+Object.assign(PTD,{"Think about the last 3 years. If you went on holiday to any of these places in Portugal, choose the one you went to most often.": "Pense nos últimos 3 anos. Se foi de férias a algum destes locais em Portugal, escolha aquele a que foi mais vezes.", "If you did not go to any of those places, tell us where you went most often in the last 3 years, in Portugal or abroad.": "Se não foi a nenhum destes locais, diga-nos onde foi mais vezes nos últimos 3 anos, em Portugal ou no estrangeiro.", "Now think about the last time you were there, and the experience you had.": "Agora pense na última vez que lá esteve e na experiência que teve.", "Watch again": "Ver outra vez", "Let's create a loyalty program that helps make your holidays in Portugal the best they can be. Your answers show us what a great holiday means to you, and how a loyalty program could help.": "Vamos criar um programa de fidelização que ajude a tornar as suas férias em Portugal as melhores possíveis. As suas respostas mostram-nos o que são boas férias para si e como um programa de fidelização pode ajudar.", "Tap each step and choose what you would most like to have. The goal is a program that helps make your holidays in Portugal the best they can be.": "Toque em cada passo e escolha o que mais gostaria de ter. O objetivo é um programa que ajude a tornar as suas férias em Portugal as melhores possíveis."});
 function ptAct(a){for(var i=0;i<VERTS.length;i++){if(VERTS[i].l.toLowerCase()===a&&PTD[VERTS[i].l])return PTD[VERTS[i].l].toLowerCase();}return a;}
 PATS.push([/^How often did you go to (.+) in the last 3 years\?$/,"Com que frequência foi a $1 nos últimos 3 anos?"],
  [/^Everything stays within one activity\. For example: only (.+)$/,function(m,a){return "Tudo fica numa só atividade. Por exemplo: só "+ptAct(a);}],
@@ -728,17 +730,17 @@ var STEPS=[
   valid:function(){return true;}},
  {id:"places",stage:1,
   html:function(){var list=PLACES.map(function(p){return {k:p.k,l:p.k,d:p.d,icon:false};}).concat([{k:"none",l:"None of these",d:"I did not go to any of these places",icon:false,fixed:true}]);
-   return '<h2>Where did you go the most?</h2><p class="sub">Think about the last 3 years. If you went on holiday to any of these places in Portugal, choose the one you went to most often. We will then ask about your last visit there.</p>'+holidayDef()+
+   return '<h2>Where did you go the most?</h2><p class="sub">Think about the last 3 years. If you went on holiday to any of these places in Portugal, choose the one you went to most often.</p>'+holidayDef()+
     q("The place I went to most often",choice("dest","single",list,{style:"tiles",rand:true}));},
   valid:function(){return !!A.dest;}},
  {id:"otherplace",stage:1,skip:function(){return A.dest!=="none";},
-  html:function(){return '<h2>Where did you go instead?</h2><p class="sub">If you did not go to any of those places, tell us where you went most often in the last 3 years, in Portugal or abroad. We will then ask about your last visit there.</p>'+
+  html:function(){return '<h2>Where did you go instead?</h2><p class="sub">If you did not go to any of those places, tell us where you went most often in the last 3 years, in Portugal or abroad.</p>'+
     '<div class="other"><input type="text" id="od" data-t="otherDest" maxlength="120" placeholder="Name of the place" value="'+esc(A.otherDest||"")+'" aria-label="Where did you go most often on holiday"></div>'+
     '<label class="check"><input type="checkbox" data-c="noHol"'+(A.noHol?' checked':'')+'><span>I did not go on holiday in the last 3 years.</span></label>';},
   valid:function(){return (A.otherDest||"").trim().length>1||!!A.noHol;},
   onNext:function(){if(A.noHol){S.end="novisit";send(payload({screened_out:"no_holiday"}),function(){});}}},
  {id:"trip",stage:1,
-  html:function(){return '<h2>Your holidays in '+esc(place())+'</h2><p class="sub">Think about the last time you were there, and the experience you had.</p>'+
+  html:function(){return '<h2>Your holidays in '+esc(place())+'</h2><p class="sub">Now think about the last time you were there, and the experience you had.</p>'+
    q("How often did you go to [PLACE] in the last 3 years?",choice("freq","single",FREQ,{style:"chips"}))+
    '<p class="bh">Your last visit</p>'+
    q("How long did you stay on your last visit?",choice("nights","single",NIGHTS,{style:"chips"}))+
@@ -750,11 +752,18 @@ var STEPS=[
    return '<h2>What was the main reason for your last visit to '+esc(place())+'?</h2><p class="sub">Think about the last time you were there. Pick the one that fits best.</p>'+choice("entry","single",list,{style:"tiles",rand:true})+extra;},
   valid:function(){return !!A.entry&&(A.entry!=="other"||(A.entryOther||"").trim().length>1);}},
  {id:"demo",stage:1,nav:"Continue",
-  html:function(){return '<h2>How the ranking works</h2><p class="sub">Next, you will rank some options by how important they are to you. Here is a quick example with A, B and C.</p>'+
-   '<div class="rdemo" aria-hidden="true"><div class="rd-tray"><span class="rd-tok t1">A</span><span class="rd-tok t2">B</span><span class="rd-tok t3">C</span></div>'+
-   '<p class="rd-lab">Your ranking</p><div class="rd-list"><div class="rd-slot s1"><b>1</b></div><div class="rd-slot s2"><b>2</b></div><div class="rd-slot s3"><b>3</b></div><span class="rd-it i1">A</span><span class="rd-it i2">B</span><span class="rd-it i3">C</span></div></div>'+
-   '<p class="hint" style="margin-top:14px">Tap the options in order of importance, the most important first. You can then drag them to change the order.</p>';},
-  valid:function(){return true;}},
+  html:function(){
+   if(!S.demoSeen&&!S.demoTimer){var rm=false;try{rm=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;}catch(e){}
+    S.demoTimer=setTimeout(function(){S.demoTimer=0;S.demoSeen=true;if(S.cur==="demo"&&!S.end)updateNav();},rm?400:5900);}
+   function tok(c,n){return '<span class="tok '+c+'">'+ib("other","ti")+'<span class="tl"><span>'+n+'</span></span></span>';}
+   function row(c,i,a,b){return '<div class="rrow '+c+'"><span class="n">'+i+'</span>'+ib("other","ti")+'<span class="rt swap"><b class="a">'+a+'</b>'+(b?'<b class="b">'+b+'</b>':'')+'</span><span class="grip">'+ic("grip")+'</span></div>';}
+   return '<h2>How the ranking works</h2><p class="sub">Next, you will rank some options by how important they are to you. Here is a quick example with A, B and C.</p>'+
+   '<div class="rdemo" aria-hidden="true"><div class="tray">'+tok("t1","A")+tok("t2","B")+tok("t3","C")+'</div>'+
+   '<div class="rhead"><span class="traylabel" style="margin:0">Your ranking</span></div>'+
+   '<div class="rlist">'+row("r1",1,"A")+row("r2",2,"B","C")+row("r3",3,"C","B")+'</div></div>'+
+   '<p class="hint" style="margin-top:14px">Tap the options in order of importance, the most important first. You can then drag them to change the order.</p>'+
+   '<p style="text-align:center;margin:4px 0 0"><button type="button" class="btn" data-replay="1">Watch again</button></p>';},
+  valid:function(){return !!S.demoSeen;}},
  {id:"rank",stage:1,
   html:function(){var n=rankItems("rank").length;return '<h2>On your last visit to '+esc(place())+', what mattered most to you?</h2>'+(A.entry&&A.entry!=="other"?'<p class="sub">Your main reason is already first. Add the rest.</p>':'')+rankUI("rank");},
   valid:function(){return rankDone("rank");}},
@@ -763,7 +772,7 @@ var STEPS=[
   valid:function(){return true;}},
  {id:"hub",stage:2,
   html:function(){var nxt=null;TASKS.forEach(function(t){if(!nxt&&!S.done[t.k])nxt=t.k;});
-   var h='<h2>Design your loyalty program</h2>';
+   var h='<h2>Design your loyalty program</h2><p class="sub">Let\'s create a loyalty program that helps make your holidays in Portugal the best they can be. Your answers show us what a great holiday means to you, and how a loyalty program could help.</p>';
    var chap="";
    TASKS.forEach(function(t,i){
      if(t.chap!==chap){if(chap)h+='</div>';chap=t.chap;h+='<p class="bh">'+esc(chap)+'</p><div class="tg">';}
@@ -783,7 +792,7 @@ var STEPS=[
   html:function(){var b=A.build||{};
    function card(sl,label,desc,list,icon){var k=b[sl];var it=k?(byKey(list,k)||byKey(NOPREF,k)):null;
      return '<button type="button" class="bs'+(it?' on':'')+(S.pop==="slot:"+sl?' pop':'')+'" data-slot="'+sl+'">'+ib(it?it.k:icon,"ti")+'<span class="tx"><small>'+esc(label)+'</small><b>'+(it?esc(it.l):'Choose')+'</b><span class="sd">'+esc(it?it.d:desc)+'</span></span>'+(it&&it.def?infoBtn(sl.charAt(0)==="b"?"ben":"mech",it):'')+'<span class="ch">'+ic("chev")+'</span></button>';}
-   var h='<h2>Let\'s build your bundle</h2><p class="sub">Tap each step to choose.</p><p class="bh">How it works</p>';
+   var h='<h2>Let\'s build your bundle</h2><p class="sub">Tap each step and choose what you would most like to have. The goal is a program that helps make your holidays in Portugal the best they can be.</p><p class="bh">How it works</p>';
    ROLES.forEach(function(r){h+=card(r.k,r.l,r.d,MECH,r.icon);});
    h+='<p class="bh">'+esc(benefitQ(b))+'</p>';
    BSLOTS.forEach(function(sl,i){h+=card(sl,"Benefit "+(i+1)+(i>0?" (optional)":""),"Tap to choose",BEN,"other");});
@@ -943,6 +952,7 @@ document.addEventListener("click",function(e){
   var t=e.target;
   if(!S.end&&S.langOk&&stepById(S.cur)&&stepById(S.cur).ms&&t.closest&&t.closest("#main")){clearTimeout(S.msT);go(1);return;}
   if(t.id==="retry"){S.sub=null;render();return;}
+  if(t.closest&&t.closest("[data-replay]")){render(true);return;}
   var tk=t.closest&&t.closest("[data-task]");
   if(tk){var TT=taskById(tk.getAttribute("data-task"));enter(TT.steps[0],1);render();window.scrollTo(0,0);return;}
   if(t.closest&&t.closest("#finish")){if(reqDone()){enter("open",1);render();window.scrollTo(0,0);}return;}
