@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Holiday &amp; leisure in Portugal | Nova SBE student study</title>
-<meta name="description" content="Estudo de estudantes da Nova SBE sobre férias e lazer em Portugal. 5 minutos, anónimo. | A Nova SBE student study about holiday and leisure in Portugal. 5 minutes, anonymous.">
+<title>Holidays in Portugal | Nova SBE student study</title>
+<meta name="description" content="A Nova SBE student study about holidays in Portugal. 5 minutes, anonymous.">
 <meta name="theme-color" content="#3b4b56">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Nova SBE">
-<meta property="og:title" content="Holiday &amp; leisure in Portugal | Férias e lazer em Portugal">
-<meta property="og:description" content="A Nova SBE student study about holidays in Portugal. 5 minutes, anonymous. | Estudo de estudantes da Nova SBE. 5 minutos, anónimo.">
+<meta property="og:title" content="Holidays in Portugal">
+<meta property="og:description" content="A Nova SBE student study about holidays in Portugal. 5 minutes, anonymous.">
 <meta property="og:url" content="https://hospitality-study-nova.github.io/customer-survey">
 <meta property="og:image" content="https://hospitality-study-nova.github.io/customer-survey/og.png">
 <meta property="og:image:width" content="1200">
@@ -485,7 +485,7 @@ Object.assign(PTD,{"Tap each step to choose.":"Toque em cada passo para escolher
 Object.assign(PTD,{"My answers are used only in aggregate, for a Nova SBE Master's project. The program I build is an illustration, not a real offer.":"As minhas respostas são usadas apenas de forma agregada, num projeto de mestrado da Nova SBE. O programa que construo é uma ilustração e não uma oferta real."});
 Object.assign(PTD,{"Four quick things about you.":"Quatro perguntas rápidas sobre si.","What is your gender?":"Qual é o seu género?","Male":"Masculino","Female":"Feminino","Non binary":"Não binário"});
 Object.assign(PTD,{"Family, kids under 12":"Família, filhos com menos de 12 anos","Family, kids 12 to 17":"Família, filhos dos 12 aos 17 anos"});
-Object.assign(PTD,{"Copy link":"Copiar link","Holiday & leisure in Portugal":"Férias e lazer em Portugal"});
+Object.assign(PTD,{"Copy link":"Copiar link"});
 var MISS=[];window.__miss=MISS;window.__PTD=PTD;
 function loadOverrides(){
   if(!CONFIG.SUPABASE_URL)return;
@@ -833,7 +833,7 @@ function render(keepScroll){
   var stc=main.querySelectorAll(".stamp");for(var si=0;si<stc.length;si++)stc[si].style.setProperty("--n",si);
   if(!st.raw)trDom(main);
   iconHints(main);
-  document.getElementById("ttl").textContent=st.raw?"Holiday & leisure in Portugal":trs("Holiday & leisure in Portugal");
+  document.getElementById("ttl").textContent=st.raw?"Holidays in Portugal":trs("Holidays in Portugal");
   var lg=document.getElementById("lg");lg.textContent=S.lang==="pt"?"EN":"PT";lg.style.visibility=S.langOk?"visible":"hidden";bBack.setAttribute("aria-label",trs("Back"));
   updateNav();
   if(!S.langOk)showLang();
@@ -996,7 +996,7 @@ function send(p,cb){
   .then(function(r){cb(r.ok?"saved":"error");}).catch(function(){cb("error");});
 }
 function shareUrl(){return CONFIG.SHARE_URL||location.href.split("#")[0];}
-function shareTxt(){return S.lang==="pt"?"Estudo de estudantes da Nova SBE sobre férias e lazer em Portugal. Demora cerca de 5 minutos e é anónimo:":"A Nova SBE student study about holiday and leisure in Portugal. It takes about 5 minutes and is anonymous:";}
+function shareTxt(){return S.lang==="pt"?"Estudo de estudantes da Nova SBE sobre férias em Portugal. Demora cerca de 5 minutos e é anónimo:":"A Nova SBE student study about holidays in Portugal. It takes about 5 minutes and is anonymous:";}
 function copyLink(){
   var url=shareUrl();
   function copied(){S.copied=true;render(true);setTimeout(function(){S.copied=false;if(S.cur==="pass")render(true);},2200);}
@@ -1004,7 +1004,7 @@ function copyLink(){
   var ta=document.createElement("textarea");ta.value=url;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");copied();}catch(e){}document.body.removeChild(ta);
 }
 function shareIt(){
-  var data={title:S.lang==="pt"?"Férias e lazer em Portugal":"Holiday & leisure in Portugal",text:shareTxt(),url:shareUrl()};
+  var data={title:S.lang==="pt"?"Férias em Portugal":"Holidays in Portugal",text:shareTxt(),url:shareUrl()};
   if(navigator.share){navigator.share(data).catch(function(){});return;}
   copyLink();
 }

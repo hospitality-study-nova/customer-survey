@@ -87,6 +87,10 @@ tr.click{cursor:pointer}tr.click:hover{background:var(--panel)}
 .scr h3{font-size:1.7rem;font-weight:800;letter-spacing:-.03em;margin:22px 0 14px}
 .scr .trow{border-radius:16px;background:var(--panel);border-color:transparent}
 .scr textarea{background:#fff;font-weight:600}
+.doc{max-width:860px}
+.doc .card{margin:14px 0}
+.doc ul{margin:8px 0 0;padding-left:20px}
+.doc li{margin:7px 0;line-height:1.55}
 </style>
 </head>
 <body>
@@ -111,7 +115,7 @@ var ST={tab:"overview",rows:[],filter:"all",user:null,texts:null,groups:null,scr
 
 /* ---------- questionnaire link ---------- */
 function formUrl(){return C.SITE_URL||new URL("./",location.href).href;}
-function shareMsg(){return "A Nova SBE student study on holidays and leisure in Portugal. It takes about 5 minutes and is anonymous: "+formUrl();}
+function shareMsg(){return "A Nova SBE student study on holidays in Portugal. It takes about 5 minutes and is anonymous: "+formUrl();}
 function copyText(t,btn){
   function ok(){if(btn){var o=btn.textContent;btn.textContent="Copied";setTimeout(function(){btn.textContent=o;},1600);}}
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,function(){});return;}
@@ -155,7 +159,7 @@ sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_IN"&&!ST.user)boot();});
 function shell(){
   app.innerHTML='<header class="top"><div class="wrap"><div class="bar"><h1>Customer Survey<small>Private team area</small></h1>'+
    '<button class="btn pri sm" id="clink">Copy questionnaire link</button><a class="btn sm" id="tst" href="'+esc(formUrl()+'?test=1')+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Test survey (nothing is saved)</a><button class="btn sm" id="out">Sign out</button></div>'+
-   '<nav class="tabs"><button data-t="overview">Overview</button><button data-t="responses">Responses</button><button data-t="texts">Survey</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
+   '<nav class="tabs"><button data-t="overview">Overview</button><button data-t="responses">Responses</button><button data-t="texts">Survey</button><button data-t="method">Methodology</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
   qs("#clink").onclick=function(){copyText(formUrl(),this);};
   qs("#out").onclick=function(){sb.auth.signOut().then(function(){ST.user=null;ST.loaded=false;loginView();});};
   Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.onclick=function(){ST.tab=b.getAttribute("data-t");if(ST.tab!=="texts")ST.unlocked=false;paint();};});
@@ -166,6 +170,7 @@ function paint(){
   var v=qs("#view");
   if(ST.err){v.innerHTML='<p class="msg bad">'+esc(ST.err)+'</p>';return;}
   if(ST.tab==="texts"){textsView(v);return;}
+  if(ST.tab==="method"){methodView(v);return;}
   if(!ST.loaded){v.innerHTML='<p class="msg">A carregar...</p>';return;}
   if(ST.tab==="responses")responsesView(v);else overviewView(v);
 }
@@ -327,6 +332,86 @@ function exportCsv(rows){
   var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="holiday-study-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
 
+/* ---------- methodology ---------- */
+var METHOD=[
+ ["Purpose and why this survey",[
+  "Validate with consumers the Steering 1 hypotheses about which mechanisms and benefits of a loyalty programme each destination values most.",
+  "Central question: which mechanisms and benefits does the average consumer of each place prioritise?",
+  "Six places, with a minimum of 30 responses per place (180 in total): Albufeira, Lagos, Vilamoura, Tróia, Aroeira and Castro Marim.",
+  "It complements the anonymous interviews: the interviews give the view of those who manage the offer, the survey gives the view of those who consume it.",
+  "Expected output: a ranking of 9 mechanisms and 11 benefits by place and by market tier, the programme each person builds, and willingness to pay.",
+  "Market tiers: Tróia Luxury, Vilamoura Premium, Lagos Mid market, Albufeira Mass. Aroeira and Castro Marim have no tier yet."]],
+ ["Questionnaire structure (as built)",[
+  "1. Language (English or Portuguese, starting from the browser language) and a cover with an explicit consent box.",
+  "2. Profile: gender, age, residence and loyalty programmes already held. Milestone: “Profile created”.",
+  "3. Place: the one place they went to the most in the last 3 years (the 6 places, “None of these” or “I did not go on holiday”).",
+  "4. Last visit to that place: how often they go, nights, who they travelled with, and the main reason for the visit.",
+  "5. Ranking of the holiday verticals (8, plus “Something else”): what mattered most on that visit. Milestone: “Holiday profile ready”.",
+  "6. Design your loyalty programme: five tasks in a fixed order, each unlocking the next. (a) Rank the 9 mechanisms. (b) Rank the 11 benefits. (c) The foundation: free, paid or free with an upgrade, the annual fee band if paid, how many activities, and geographic reach. (d) Budget: hotel room and dinner per person, in bands. (e) Build the bundle: how to enter, how to earn, how to level up, and up to 3 benefits.",
+  "7. One open question, then a thank-you page with a personal summary and a share link.",
+  "Target duration: about 5 minutes, to be confirmed in the pilot. Web format designed for mobile, in English and Portuguese.",
+  "Version in use: proto-0.6-hub. Checked against the live survey on 2 November 2026."]],
+ ["Neutrality",[
+  "Principle: the form of the questionnaire must not favour any answer.",
+  "Option order is random for each person (see Randomisation) and no answer is pre-selected. Rankings start empty.",
+  "All options have the same visual weight: same size, icons of the same style, no photographs and no brand or destination logos, to avoid creating associations. The only logo is the Nova SBE one on the cover.",
+  "A single accent colour, a bluish slate grey. Green and red were avoided because they suggest right and wrong, and warm colours because they stimulate. The idea that cool, sober tones are more neutral comes from survey design practice and must be backed by literature before we cite it.",
+  "Neutral language, no marketing adjectives. The cover says the programme is an illustration, not a real offer.",
+  "The cover presents a Nova SBE student project and does not name the client, so as not to influence answers.",
+  "Escape options are always available and always last: “None of these” (loyalty programmes), “Prefer not to say” (gender, hotel room and dinner bands), “Something else” (main reason) and “No preference” / “One level is fine” (Earn and Level up in the builder). Age and the annual fee bands have no “Prefer not to say”: age is needed to screen out under-18s, and the fee only appears for paid programmes."]],
+ ["Gamification",[
+  "Why: there are 20 items to rank and many definitions. A traditional questionnaire would be dense and tiring.",
+  "What we use: ranking by tap or drag, building your own programme, milestones (“Profile created”, “Holiday profile ready”), a progress bar by stage, a task hub, and confetti only at the end.",
+  "Limits so as not to over-stimulate: no points, no rankings between people, no time limit and no rewards tied to answers. Animations are discreet and identical for all options, they respect the phone’s “reduce motion” setting, and there is a single colour.",
+  "Accepted risk: the interactive format may change response style compared with a classic questionnaire. Mitigation: pilot and, if possible, compare time and quality of responses."]],
+ ["Randomisation",[
+  "The order of options changes for each person, to avoid position effects: the first and last options tend to be chosen more often. The order is drawn once per person and stays the same if they go back.",
+  "Randomised: places, main reason for the last visit, verticals, the 9 mechanisms, the 11 benefits, the options inside the programme builder, programme type (free, paid, upgrade), loyalty programmes held, and who they travelled with.",
+  "Always last, never randomised: “None of these” (places and loyalty programmes), “Something else” (main reason), “No preference” and “One level is fine” (builder), and “Prefer not to say” (budget bands).",
+  "Not randomised: gender, age, residence and the ordered scales (frequency, nights, annual fee bands, hotel and dinner bands), activities and geographic reach, which also run from narrow to wide.",
+  "The order of the blocks is fixed, from the most general to the most specific, and the five tasks of the programme hub always run in the same order.",
+  "Recording: every response stores the order in which each list was shown to that person (field presented_order, also a column in the CSV export). This allows testing position effects, for example average rank by position shown. Responses collected before this was added do not have it.",
+  "Not done: randomising the order of the two ranking blocks (mechanisms always come before benefits). It could be added, but the later tasks depend on the earlier ones, so it needs a deliberate decision."]],
+ ["Anchoring on the last visit",[
+  "Questions start from real, recent behaviour, the last visit to the place, and not from hypothetical preferences. This reduces memory bias and social desirability bias.",
+  "One place per person, the one visited most in the last 3 years, so that each response belongs to a clear cell.",
+  "“Holiday” is defined at the start: any trip where you sleep at least one night away from your own home.",
+  "Under 18: the person leaves the study and nothing is saved. No holiday in the last 3 years: the person leaves and the response is saved as “excluded”. Someone who goes somewhere other than the 6 places continues and is recorded separately as another place."]],
+ ["Prices",[
+  "Money questions come after both rankings, so they cannot anchor the rankings. Seeing high values first tends to make people value premium benefits more.",
+  "Where they actually sit: free or paid and the annual fee are in “The foundation”, and the hotel room and dinner bands are in “Your budget”. Both come before the bundle builder, not at the very end of the questionnaire. Whether the budget should move after the build is still open.",
+  "Hotel room and dinner bands include “Prefer not to say”. The current bands are estimates to tell positionings apart and must be validated with real prices.",
+  "Proposed change, not applied: ask what the person paid on the last visit instead of the maximum they would pay, with a “did not stay in a hotel” option."]],
+ ["Definitions of mechanisms and benefits",[
+  "9 mechanisms and 11 benefits, with simple names and a short definition. The “i” on each option opens “What it means” and examples, and the definition card on the ranking pages says “(Click the i for more information)”.",
+  "The definitions start from those of Steering 1. The examples and supporting phrases are ours and should be reviewed by the team.",
+  "The roles Enter, Earn and Level up only appear in the programme builder. In the rankings the mechanisms are treated together, as in the Steering.",
+  "Earn and Level up have a “No preference” option.",
+  "Portuguese translation is a draft, to be reviewed by back-translation. All texts can be edited in the Survey tab, which is locked by default.",
+  "The data stores the English names and keys, and the language used."]],
+ ["Academic feasibility and limits",[
+  "Type of study: descriptive and comparative survey across places and tiers.",
+  "Convenience and snowball sample, not representative of the population. The results are rankings and comparisons, not population estimates.",
+  "Planned analysis: average rank and percentage in the top 3 of each item, by place and by tier, and comparison between tiers with non-parametric tests (to be defined).",
+  "Ethics: anonymous, no name or email, adults only, explicit consent, and data used in aggregate. To confirm with the coordination: GDPR compliance and use of the Nova SBE logo.",
+  "Suggested base references, to verify before citing: Dillman, Smyth and Christian (2014) on online surveys; Krosnick (1991) on satisficing; Tourangeau, Couper and Conrad (2004) on visual and position effects; Deterding et al. (2011) on gamification.",
+  "Limits: self-selection of people who answer online, an interactive format that may influence answers, 20 items to rank, our own translations, and missing tiers for Aroeira and Castro Marim."]],
+ ["Status and next steps",[
+  "Status: working HTML prototype, connected to the database (Supabase). The Test survey button opens a mode where nothing is saved. The team area has the overview, individual responses with CSV export, and the editable survey texts.",
+  "Run one real submission and confirm it appears under Responses.",
+  "Pilot with 10 people on mobile (5 per language), measuring the real response time.",
+  "Links per place to control quotas. Not built: people choose their place in the survey, and the overview only shows progress against the goal of 30.",
+  "Assign a tier to Aroeira and Castro Marim, confirm the price bands, and add a view by tier to the overview, which currently filters by place only.",
+  "Decide whether to add attention and speed checks. The time taken is already recorded.",
+  "Review the Portuguese translation, the logo and the privacy note.",
+  "This page is updated as the questionnaire evolves."]]
+];
+function methodView(v){
+  var h='<div class="doc"><h2>Survey methodology</h2><p class="msg" style="margin-top:-4px">Vera · 27 Oct 2026 · reviewed against the live survey on 2 Nov 2026</p>';
+  METHOD.forEach(function(sec,i){h+='<section class="card"><h3>'+(i+1)+'. '+esc(sec[0])+'</h3><ul>'+sec[1].map(function(t){return '<li>'+esc(t)+'</li>';}).join("")+'</ul></section>';});
+  v.innerHTML=h+'</div>';
+}
+
 /* ---------- survey texts ---------- */
 function loadTexts(cb){
   var n=0,done=function(){if(++n===3){cb();}};
@@ -360,7 +445,7 @@ function textsView(v){
   if(!q)h+='<nav class="screens">'+all.map(function(g){return '<button data-s="'+esc(g.id)+'"'+(cur&&g.id===cur.id?' class="on"':'')+'>'+esc(g.title)+'</button>';}).join("")+'</nav>';
   show.forEach(function(g){
     var sg=(ST.groups||[]).filter(function(x){return x.id===g.id;})[0],si=sg&&sg.stage!=null?sg.stage:-1;
-    h+='<section class="scr"><div class="scrtop"><span>Holiday &amp; leisure in Portugal</span><span>PT</span></div><div class="stages">'+["Profile","Holiday","Preferences","Foundation","Bundle"].map(function(n,i){return '<div class="stg'+(i<=si?' on':'')+'"><i></i><span>'+n+'</span></div>';}).join("")+'</div><h3>'+esc(g.title.replace(/^\d+\.\s*/,""))+'</h3>'+g.keys.map(textRow).join("")+'</section>';
+    h+='<section class="scr"><div class="scrtop"><span>Holidays in Portugal</span><span>PT</span></div><div class="stages">'+["Profile","Holiday","Preferences","Foundation","Bundle"].map(function(n,i){return '<div class="stg'+(i<=si?' on':'')+'"><i></i><span>'+n+'</span></div>';}).join("")+'</div><h3>'+esc(g.title.replace(/^\d+\.\s*/,""))+'</h3>'+g.keys.map(textRow).join("")+'</section>';
   });
   if(!show.length)h+='<p class="empty">No texts found.</p>';
   v.innerHTML=h;
