@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -71,6 +71,13 @@ tr.click{cursor:pointer}tr.click:hover{background:var(--panel)}
 .trow .act{display:flex;gap:10px;align-items:center;margin-top:8px;font-size:.8rem;color:var(--muted)}
 .trow.edited{border-color:var(--accent)}
 @media(max-width:640px){.trow .two{grid-template-columns:1fr}.kv{grid-template-columns:1fr}.row{grid-template-columns:minmax(80px,42%) 1fr auto}}
+.screens{display:flex;gap:6px;overflow:auto;padding:4px 0 12px;margin:0 -2px}
+.screens button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 12px;font-weight:700;font-size:.8rem;color:var(--muted);cursor:pointer;white-space:nowrap}
+.screens button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.scr{max-width:760px;margin:6px auto 24px;background:#fff;border:1px solid var(--line);border-radius:24px;padding:20px 22px;box-shadow:0 8px 30px rgba(0,0,0,.05)}
+.scr h3{font-size:1.35rem;letter-spacing:-.02em;margin:10px 0 14px}
+.scrbar{height:5px;border-radius:99px;background:var(--panel);overflow:hidden}
+.scrbar i{display:block;height:100%;background:var(--accent);border-radius:99px}
 </style>
 </head>
 <body>
@@ -88,48 +95,48 @@ var app=document.getElementById("app");
 function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
 function qs(sel,el){return (el||document).querySelector(sel);}
 if(!C.SUPABASE_URL||!C.SUPABASE_ANON_KEY||!window.supabase){
-  app.innerHTML='<div class="login"><div class="card"><h3>Falta configurar</h3><p class="msg">Preencha SUPABASE_URL e SUPABASE_ANON_KEY no ficheiro config.js (ver LEIA-ME.md).</p></div></div>';return;
+  app.innerHTML='<div class="login"><div class="card"><h3>Setup missing</h3><p class="msg">Fill in SUPABASE_URL and SUPABASE_ANON_KEY in config.js (see LEIA-ME.md).</p></div></div>';return;
 }
 var sb=window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-var ST={tab:"overview",rows:[],filter:"all",user:null,texts:null,unlocked:false,ovr:{},tq:"",tshow:30,detail:null,loaded:false,err:null};
+var ST={tab:"overview",rows:[],filter:"all",user:null,texts:null,groups:null,scr:null,unlocked:false,ovr:{},tq:"",tshow:30,detail:null,loaded:false,err:null};
 
-/* ---------- link do questionario ---------- */
+/* ---------- questionnaire link ---------- */
 function formUrl(){return C.SITE_URL||new URL("./",location.href).href;}
-function shareMsg(){return "Estudo de estudantes da Nova SBE sobre férias e lazer em Portugal. Demora cerca de 5 minutos e é anónimo: "+formUrl();}
+function shareMsg(){return "A Nova SBE student study on holidays and leisure in Portugal. It takes about 5 minutes and is anonymous: "+formUrl();}
 function copyText(t,btn){
-  function ok(){if(btn){var o=btn.textContent;btn.textContent="Copiado";setTimeout(function(){btn.textContent=o;},1600);}}
+  function ok(){if(btn){var o=btn.textContent;btn.textContent="Copied";setTimeout(function(){btn.textContent=o;},1600);}}
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,function(){});return;}
   var ta=document.createElement("textarea");ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");ok();}catch(e){}document.body.removeChild(ta);
 }
 
 /* ---------- login ---------- */
 function loginView(msg,cls){
-  app.innerHTML='<div class="login"><div class="card"><h3 style="font-size:1.2rem">Customer Survey | Equipa</h3><p class="msg" style="margin-top:4px">Área privada. Entre com o email da equipa.</p>'+
+  app.innerHTML='<div class="login"><div class="card"><h3 style="font-size:1.2rem">Customer Survey | Team</h3><p class="msg" style="margin-top:4px">Private area. Sign in with your team email.</p>'+
    '<label for="em">Email</label><input type="email" id="em" autocomplete="username">'+
-   '<label for="pw">Palavra-passe</label><input type="password" id="pw" autocomplete="current-password">'+
-   '<div style="display:flex;gap:10px;margin-top:16px"><button class="btn pri" id="go" style="flex:1">Entrar</button><button class="btn" id="ml">Enviar link por email</button></div>'+
+   '<label for="pw">Password</label><input type="password" id="pw" autocomplete="current-password">'+
+   '<div style="display:flex;gap:10px;margin-top:16px"><button class="btn pri" id="go" style="flex:1">Sign in</button><button class="btn" id="ml">Email me a link</button></div>'+
    '<p class="msg '+(cls||'')+'" id="lm">'+esc(msg||"")+'</p></div></div>';
   function val(i){return qs("#"+i).value.trim();}
   qs("#go").onclick=function(){
     sb.auth.signInWithPassword({email:val("em"),password:qs("#pw").value}).then(function(r){
-      if(r.error){qs("#lm").textContent="Email ou palavra-passe incorretos.";qs("#lm").className="msg bad";}else boot();});
+      if(r.error){qs("#lm").textContent="Wrong email or password.";qs("#lm").className="msg bad";}else boot();});
   };
   qs("#pw").addEventListener("keydown",function(e){if(e.key==="Enter")qs("#go").click();});
   qs("#ml").onclick=function(){
-    if(!val("em")){qs("#lm").textContent="Escreva o seu email primeiro.";qs("#lm").className="msg bad";return;}
+    if(!val("em")){qs("#lm").textContent="Enter your email first.";qs("#lm").className="msg bad";return;}
     sb.auth.signInWithOtp({email:val("em"),options:{shouldCreateUser:false,emailRedirectTo:location.href.split("#")[0]}}).then(function(r){
-      qs("#lm").textContent=r.error?"Não foi possível enviar. Confirme o email.":"Enviámos um link para o seu email.";qs("#lm").className="msg "+(r.error?"bad":"ok");});
+      qs("#lm").textContent=r.error?"Could not send. Check the email.":"We sent a link to your email.";qs("#lm").className="msg "+(r.error?"bad":"ok");});
   };
 }
 
-/* ---------- arranque ---------- */
+/* ---------- boot ---------- */
 function boot(){
   sb.auth.getSession().then(function(r){
     var s=r.data&&r.data.session;
     if(!s){loginView();return;}
     ST.user=s.user;
     sb.rpc("is_team").then(function(t){
-      if(t.error||t.data!==true){app.innerHTML='<div class="login"><div class="card"><h3>Sem acesso</h3><p class="msg bad">Esta conta ('+esc(s.user.email)+') não está na lista da equipa.</p><button class="btn" id="so" style="margin-top:12px">Sair</button></div></div>';qs("#so").onclick=function(){sb.auth.signOut().then(function(){loginView();});};return;}
+      if(t.error||t.data!==true){app.innerHTML='<div class="login"><div class="card"><h3>No access</h3><p class="msg bad">This account ('+esc(s.user.email)+') is not on the team list.</p><button class="btn" id="so" style="margin-top:12px">Sign out</button></div></div>';qs("#so").onclick=function(){sb.auth.signOut().then(function(){loginView();});};return;}
       shell();loadRows();
     });
   });
@@ -137,9 +144,9 @@ function boot(){
 sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_IN"&&!ST.user)boot();});
 
 function shell(){
-  app.innerHTML='<header class="top"><div class="wrap"><div class="bar"><h1>Customer Survey<small>Área privada da equipa</small></h1>'+
-   '<button class="btn pri sm" id="clink">Copiar link do questionário</button><button class="btn sm" id="shr">Partilhar</button><a class="btn sm" id="opn" href="'+esc(formUrl())+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Abrir</a><button class="btn sm" id="out">Sair</button></div>'+
-   '<nav class="tabs"><button data-t="overview">Visão geral</button><button data-t="responses">Respostas</button><button data-t="texts">Textos</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
+  app.innerHTML='<header class="top"><div class="wrap"><div class="bar"><h1>Customer Survey<small>Private team area</small></h1>'+
+   '<button class="btn pri sm" id="clink">Copy questionnaire link</button><button class="btn sm" id="shr">Share</button><a class="btn sm" id="opn" href="'+esc(formUrl())+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Open</a><button class="btn sm" id="out">Sign out</button></div>'+
+   '<nav class="tabs"><button data-t="overview">Overview</button><button data-t="responses">Responses</button><button data-t="texts">Survey</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
   qs("#clink").onclick=function(){copyText(formUrl(),this);};
   qs("#shr").onclick=function(){
     if(navigator.share){navigator.share({title:"Holiday & leisure in Portugal",text:shareMsg()}).catch(function(){});}
@@ -163,7 +170,7 @@ function loadRows(){
   var all=[];
   function page(from){
     sb.from("responses").select("session_id,created_at,updated_at,destination,payload").order("created_at",{ascending:false}).range(from,from+999).then(function(r){
-      if(r.error){ST.err="Erro ao ler respostas: "+r.error.message;paint();return;}
+      if(r.error){ST.err="Error reading responses: "+r.error.message;paint();return;}
       all=all.concat(r.data);
       if(r.data.length===1000)page(from+1000);else{ST.rows=all;ST.loaded=true;paint();}
     });
@@ -185,7 +192,7 @@ function pct(n,t){return t?Math.round(n/t*100):0;}
 function bars(title,counts,total,opts){
   opts=opts||{};
   var h='<div class="card"><h3>'+esc(title)+'</h3>'+(opts.note?'<p class="note">'+esc(opts.note)+'</p>':'');
-  if(!counts.length||!total){return h+'<p class="empty">Sem dados.</p></div>';}
+  if(!counts.length||!total){return h+'<p class="empty">No data.</p></div>';}
   var max=Math.max.apply(null,counts.map(function(c){return c[1];}))||1;
   counts.forEach(function(c){h+='<div class="row"><span class="l" title="'+esc(c[0])+'">'+esc(c[0])+'</span><span class="t"><i style="width:'+Math.round(c[1]/max*100)+'%"></i></span><span class="v">'+c[1]+' ('+pct(c[1],total)+'%)</span></div>';});
   return h+'</div>';
@@ -202,11 +209,11 @@ function ranks(title,rows,get,note){
   var sum={},n={},first={},cnt=0;
   rows.forEach(function(r){var a=get(r);if(!a||!a.length)return;cnt++;a.forEach(function(x,i){sum[x]=(sum[x]||0)+i+1;n[x]=(n[x]||0)+1;if(i===0)first[x]=(first[x]||0)+1;});});
   var keys=Object.keys(sum).sort(function(a,b){return sum[a]/n[a]-sum[b]/n[b];});
-  var h='<div class="card"><h3>'+esc(title)+'</h3><p class="note">'+esc(note||"Posição média (1 é a melhor) e % que a pôs em 1.º lugar.")+'</p>';
-  if(!cnt)return h+'<p class="empty">Sem dados.</p></div>';
+  var h='<div class="card"><h3>'+esc(title)+'</h3><p class="note">'+esc(note||"Average position (1 is best) and % who ranked it first.")+'</p>';
+  if(!cnt)return h+'<p class="empty">No data.</p></div>';
   var L=keys.length;
   keys.forEach(function(k){var avg=sum[k]/n[k];var w=L>1?Math.round((L-avg)/(L-1)*100):100;
-    h+='<div class="row"><span class="l" title="'+esc(k)+'">'+esc(k)+'</span><span class="t"><i style="width:'+Math.max(w,3)+'%"></i></span><span class="v">'+avg.toFixed(1)+' · '+pct(first[k]||0,cnt)+'% em 1.º</span></div>';});
+    h+='<div class="row"><span class="l" title="'+esc(k)+'">'+esc(k)+'</span><span class="t"><i style="width:'+Math.max(w,3)+'%"></i></span><span class="v">'+avg.toFixed(1)+' · '+pct(first[k]||0,cnt)+'% ranked 1st</span></div>';});
   return h+'</div>';
 }
 
@@ -220,45 +227,45 @@ function overviewView(v){
   var screened=ST.rows.length-all.length;
   var inT=all.filter(function(r){return P(r).in_target_place;}).length;
   var dur=all.map(function(r){return P(r).duration_s;}).filter(function(x){return x>0;}).sort(function(a,b){return a-b;});
-  var med=dur.length?Math.round(dur[Math.floor(dur.length/2)]/60*10)/10:"n/d";
-  var h='<h2>Respostas</h2><div class="grid kpis">'+
-   kpi(all.length,"respostas completas")+kpi(inT,"nos 6 destinos")+kpi(all.length-inT,"noutros locais")+kpi(screened,"excluídas (sem férias)")+kpi(med,"minutos (mediana)")+'</div>';
-  h+='<h2>Objetivo por destino</h2><div class="card">'+'<p class="note">Meta: '+QUOTA+' respostas por destino.</p>';
+  var med=dur.length?Math.round(dur[Math.floor(dur.length/2)]/60*10)/10:"n/a";
+  var h='<h2>Responses</h2><div class="grid kpis">'+
+   kpi(all.length,"complete responses")+kpi(inT,"in the 6 destinations")+kpi(all.length-inT,"in other places")+kpi(screened,"excluded (no holiday)")+kpi(med,"minutes (median)")+'</div>';
+  h+='<h2>Target by destination</h2><div class="card">'+'<p class="note">Goal: '+QUOTA+' responses per destination.</p>';
   PLACES.forEach(function(p){var n=all.filter(function(r){return placeOf(r)===p;}).length;
     h+='<div class="row'+(n>=QUOTA?' ok':'')+'"><span class="l">'+esc(p)+'</span><span class="t"><i style="width:'+Math.min(100,pct(n,QUOTA))+'%"></i></span><span class="v">'+n+' / '+QUOTA+'</span></div>';});
   h+='</div>';
-  h+='<h2>Análise</h2><div class="filters"><label for="flt" style="font-weight:700">Filtrar:</label><select id="flt"><option value="all">Todos ('+all.length+')</option>'+
-    PLACES.concat([OTHER]).map(function(p){return '<option value="'+esc(p)+'"'+(ST.filter===p?' selected':'')+'>'+esc(p==OTHER?"Outros locais (não destino)":p)+' ('+all.filter(function(r){return placeOf(r)===p;}).length+')</option>';}).join("")+'</select><span class="tag">'+T+' respostas</span></div>';
+  h+='<h2>Analysis</h2><div class="filters"><label for="flt" style="font-weight:700">Filter:</label><select id="flt"><option value="all">All ('+all.length+')</option>'+
+    PLACES.concat([OTHER]).map(function(p){return '<option value="'+esc(p)+'"'+(ST.filter===p?' selected':'')+'>'+esc(p==OTHER?"Other places (not a destination)":p)+' ('+all.filter(function(r){return placeOf(r)===p;}).length+')</option>';}).join("")+'</select><span class="tag">'+T+' responses</span></div>';
   h+='<div class="grid cards">'+
-   bars("Destino",tally(rows,function(r){return placeOf(r);},PLACES.concat([OTHER])),T)+
-   bars("Género",tally(rows,function(r){return P(r).gender;},GENDER),T)+
-   bars("Idade",tally(rows,function(r){return P(r).age;},AGE),T)+
-   bars("Residência",tally(rows,function(r){return P(r).residence;}),T)+
-   bars("Programas de fidelização que tem",tally(rows,function(r){return P(r).loyalty_memberships;}),T,{note:"Cada pessoa pode escolher vários."})+
-   bars("Língua do questionário",tally(rows,function(r){return P(r).language==="pt"?"Português":"English";}),T)+
+   bars("Destination",tally(rows,function(r){return placeOf(r);},PLACES.concat([OTHER])),T)+
+   bars("Gender",tally(rows,function(r){return P(r).gender;},GENDER),T)+
+   bars("Age",tally(rows,function(r){return P(r).age;},AGE),T)+
+   bars("Residence",tally(rows,function(r){return P(r).residence;}),T)+
+   bars("Loyalty programmes they belong to",tally(rows,function(r){return P(r).loyalty_memberships;}),T,{note:"Each person can choose several."})+
+   bars("Questionnaire language",tally(rows,function(r){return P(r).language==="pt"?"Portuguese":"English";}),T)+
    '</div>';
-  h+='<h2>Férias</h2><div class="grid cards">'+
-   bars("Frequência",tally(rows,function(r){return P(r).frequency;},FREQ),T)+
-   bars("Noites na última visita",tally(rows,function(r){return P(r).nights_last_visit;},NIGHTS),T)+
-   bars("Com quem viajou",tally(rows,function(r){return P(r).travelled_with_last_visit;}),T)+
-   bars("Motivo principal da visita",tally(rows,function(r){return P(r).entry_point;}),T)+
-   ranks("O que mais importou (ranking)",rows,function(r){return P(r).vertical_rank;})+
+  h+='<h2>Holidays</h2><div class="grid cards">'+
+   bars("Frequency",tally(rows,function(r){return P(r).frequency;},FREQ),T)+
+   bars("Nights on last visit",tally(rows,function(r){return P(r).nights_last_visit;},NIGHTS),T)+
+   bars("Travelled with",tally(rows,function(r){return P(r).travelled_with_last_visit;}),T)+
+   bars("Main reason for the visit",tally(rows,function(r){return P(r).entry_point;}),T)+
+   ranks("What mattered most (ranking)",rows,function(r){return P(r).vertical_rank;})+
    '</div>';
-  h+='<h2>Programa de fidelização</h2><div class="grid cards">'+
-   ranks("Mecanismos (ranking)",rows,function(r){return P(r).mechanism_rank;})+
-   ranks("Benefícios (ranking)",rows,function(r){return P(r).benefit_rank;})+
-   bars("Bundle: como entra",tally(rows,function(r){return (P(r).program_built||{}).enter;}),T)+
-   bars("Bundle: como acumula",tally(rows,function(r){return (P(r).program_built||{}).earn;}),T)+
-   bars("Bundle: como sobe de nível",tally(rows,function(r){return (P(r).program_built||{}).level_up;}),T)+
-   bars("Bundle: benefícios escolhidos",tally(rows,function(r){return (P(r).program_built||{}).benefits;}),T,{note:"Até 3 por pessoa."})+
-   bars("Grátis ou pago",tally(rows,function(r){return P(r).program_type;}),T)+
-   bars("Preço anual aceitável",tally(rows,function(r){return P(r).fee_band;}),T)+
-   bars("Atividades",tally(rows,function(r){return P(r).cross_use;}),T)+
-   bars("Alcance geográfico",tally(rows,function(r){return P(r).geo_reach;}),T)+
+  h+='<h2>Loyalty programme</h2><div class="grid cards">'+
+   ranks("Mechanisms (ranking)",rows,function(r){return P(r).mechanism_rank;})+
+   ranks("Benefits (ranking)",rows,function(r){return P(r).benefit_rank;})+
+   bars("Bundle: how to join",tally(rows,function(r){return (P(r).program_built||{}).enter;}),T)+
+   bars("Bundle: how to earn",tally(rows,function(r){return (P(r).program_built||{}).earn;}),T)+
+   bars("Bundle: how to level up",tally(rows,function(r){return (P(r).program_built||{}).level_up;}),T)+
+   bars("Bundle: chosen benefits",tally(rows,function(r){return (P(r).program_built||{}).benefits;}),T,{note:"Up to 3 per person."})+
+   bars("Free or paid",tally(rows,function(r){return P(r).program_type;}),T)+
+   bars("Acceptable annual fee",tally(rows,function(r){return P(r).fee_band;}),T)+
+   bars("Activities",tally(rows,function(r){return P(r).cross_use;}),T)+
+   bars("Geographic reach",tally(rows,function(r){return P(r).geo_reach;}),T)+
    '</div>';
-  h+='<h2>Orçamento</h2><div class="grid cards">'+
-   bars("Quarto de hotel (2 pessoas, pequeno-almoço), por noite",tally(rows,function(r){return P(r).wtp_hotel_room_two_breakfast;}).sort(function(a,b){return money(a[0])-money(b[0]);}),T)+
-   bars("Jantar por pessoa, bebidas incluídas",tally(rows,function(r){return P(r).wtp_dinner_pp_drinks;}).sort(function(a,b){return money(a[0])-money(b[0]);}),T)+
+  h+='<h2>Budget</h2><div class="grid cards">'+
+   bars("Hotel room (2 people, breakfast), per night",tally(rows,function(r){return P(r).wtp_hotel_room_two_breakfast;}).sort(function(a,b){return money(a[0])-money(b[0]);}),T)+
+   bars("Dinner per person, drinks included",tally(rows,function(r){return P(r).wtp_dinner_pp_drinks;}).sort(function(a,b){return money(a[0])-money(b[0]);}),T)+
    '</div>';
   v.innerHTML=h;
   qs("#flt").onchange=function(){ST.filter=this.value;paint();};
@@ -266,14 +273,14 @@ function overviewView(v){
 function kpi(n,l){return '<div class="kpi"><b>'+esc(n)+'</b><span>'+esc(l)+'</span></div>';}
 
 /* ---------- respostas ---------- */
-function fmtDate(s){var d=new Date(s);return d.toLocaleDateString("pt-PT")+" "+d.toLocaleTimeString("pt-PT",{hour:"2-digit",minute:"2-digit"});}
+function fmtDate(s){var d=new Date(s);return d.toLocaleDateString("en-GB")+" "+d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});}
 function responsesView(v){
   var rows=ST.rows.filter(function(r){return ST.filter==="all"||placeOf(r)===ST.filter;});
-  var h='<h2>Respostas uma a uma</h2><div class="filters"><select id="flt"><option value="all">Todos os destinos</option>'+PLACES.concat([OTHER]).map(function(p){return '<option value="'+esc(p)+'"'+(ST.filter===p?' selected':'')+'>'+esc(p==OTHER?"Outros locais":p)+'</option>';}).join("")+'</select><span class="tag">'+rows.length+' registos</span><span style="flex:1"></span><button class="btn sm" id="csv">Exportar CSV</button></div>';
-  h+='<div class="tablewrap"><table><thead><tr><th>Data</th><th>Local</th><th>Género</th><th>Idade</th><th>Língua</th><th>Min.</th><th></th></tr></thead><tbody>';
+  var h='<h2>Individual responses</h2><div class="filters"><select id="flt"><option value="all">All destinations</option>'+PLACES.concat([OTHER]).map(function(p){return '<option value="'+esc(p)+'"'+(ST.filter===p?' selected':'')+'>'+esc(p==OTHER?"Other places":p)+'</option>';}).join("")+'</select><span class="tag">'+rows.length+' records</span><span style="flex:1"></span><button class="btn sm" id="csv">Export CSV</button></div>';
+  h+='<div class="tablewrap"><table><thead><tr><th>Date</th><th>Place</th><th>Gender</th><th>Age</th><th>Language</th><th>Min.</th><th></th></tr></thead><tbody>';
   rows.forEach(function(r,i){var p=P(r);
-    h+='<tr class="click" data-i="'+i+'"><td>'+esc(fmtDate(r.created_at))+'</td><td>'+esc(p.in_target_place?p.destination:(p.other_destination||"Outro"))+'</td><td>'+esc(p.gender||"")+'</td><td>'+esc(p.age||"")+'</td><td>'+esc((p.language||"").toUpperCase())+'</td><td>'+(p.duration_s?Math.round(p.duration_s/60*10)/10:"")+'</td><td>'+(isScreened(r)?'<span class="tag warn">excluída</span>':'')+'</td></tr>';});
-  if(!rows.length)h+='<tr><td colspan="7" class="empty">Ainda não há respostas.</td></tr>';
+    h+='<tr class="click" data-i="'+i+'"><td>'+esc(fmtDate(r.created_at))+'</td><td>'+esc(p.in_target_place?p.destination:(p.other_destination||"Other"))+'</td><td>'+esc(p.gender||"")+'</td><td>'+esc(p.age||"")+'</td><td>'+esc((p.language||"").toUpperCase())+'</td><td>'+(p.duration_s?Math.round(p.duration_s/60*10)/10:"")+'</td><td>'+(isScreened(r)?'<span class="tag warn">excluded</span>':'')+'</td></tr>';});
+  if(!rows.length)h+='<tr><td colspan="7" class="empty">No responses yet.</td></tr>';
   h+='</tbody></table></div>';
   v.innerHTML=h;
   qs("#flt").onchange=function(){ST.filter=this.value;paint();};
@@ -284,23 +291,23 @@ function detail(r){
   var p=P(r),b=p.program_built||{};
   function ol(a){return a&&a.length?'<ol>'+a.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ol>':"";}
   function kv(k,val){return val==null||val===""||(Array.isArray(val)&&!val.length)?"":'<dt>'+esc(k)+'</dt><dd>'+val+'</dd>';}
-  var h='<div class="modal" id="dm"><div class="sheet"><div style="display:flex;justify-content:space-between;gap:10px"><div><h3>'+esc(p.in_target_place?p.destination:(p.other_destination||"Outro local"))+'</h3><span class="tag">'+esc(fmtDate(r.created_at))+'</span></div><button class="btn sm" id="dx">Fechar</button></div>'+
-   (isScreened(r)?'<p class="msg bad">Excluída: '+esc(p.screened_out)+'</p>':'')+
-   '<dl class="kv">'+kv("Género",esc(p.gender))+kv("Idade",esc(p.age))+kv("Residência",esc(p.residence))+kv("Fidelização",esc((p.loyalty_memberships||[]).join(", ")))+
-   kv("Frequência",esc(p.frequency))+kv("Última visita",esc(p.nights_last_visit))+kv("Com quem",esc(p.travelled_with_last_visit))+kv("Motivo principal",esc(p.entry_point)+(p.entry_point_other?": "+esc(p.entry_point_other):""))+
-   kv("O que importou",ol(p.vertical_rank))+kv("Mecanismos",ol(p.mechanism_rank))+kv("Benefícios",ol(p.benefit_rank))+
-   kv("Bundle: entrar",esc(b.enter))+kv("Bundle: acumular",esc(b.earn))+kv("Bundle: subir",esc(b.level_up))+kv("Bundle: benefícios",ol(b.benefits))+
-   kv("Grátis ou pago",esc(p.program_type))+kv("Preço anual",esc(p.fee_band))+kv("Atividades",esc(p.cross_use))+kv("Alcance",esc(p.geo_reach))+
-   kv("Quarto por noite",esc(p.wtp_hotel_room_two_breakfast))+kv("Jantar por pessoa",esc(p.wtp_dinner_pp_drinks))+kv("Nas suas palavras",esc(p.open_anything_missing))+
-   kv("Língua",esc(p.language))+kv("Duração (s)",esc(p.duration_s))+kv("Versão",esc(p.version))+'</dl>'+
-   '<div style="display:flex;justify-content:flex-end"><button class="btn sm" id="ddel" style="color:var(--bad)">Apagar esta resposta</button></div></div></div>';
+  var h='<div class="modal" id="dm"><div class="sheet"><div style="display:flex;justify-content:space-between;gap:10px"><div><h3>'+esc(p.in_target_place?p.destination:(p.other_destination||"Other place"))+'</h3><span class="tag">'+esc(fmtDate(r.created_at))+'</span></div><button class="btn sm" id="dx">Close</button></div>'+
+   (isScreened(r)?'<p class="msg bad">Excluded: '+esc(p.screened_out)+'</p>':'')+
+   '<dl class="kv">'+kv("Gender",esc(p.gender))+kv("Age",esc(p.age))+kv("Residence",esc(p.residence))+kv("Loyalty programmes",esc((p.loyalty_memberships||[]).join(", ")))+
+   kv("Frequency",esc(p.frequency))+kv("Last visit",esc(p.nights_last_visit))+kv("Travelled with",esc(p.travelled_with_last_visit))+kv("Main reason",esc(p.entry_point)+(p.entry_point_other?": "+esc(p.entry_point_other):""))+
+   kv("What mattered",ol(p.vertical_rank))+kv("Mechanisms",ol(p.mechanism_rank))+kv("Benefits",ol(p.benefit_rank))+
+   kv("Bundle: join",esc(b.enter))+kv("Bundle: earn",esc(b.earn))+kv("Bundle: level up",esc(b.level_up))+kv("Bundle: benefits",ol(b.benefits))+
+   kv("Free or paid",esc(p.program_type))+kv("Annual fee",esc(p.fee_band))+kv("Activities",esc(p.cross_use))+kv("Reach",esc(p.geo_reach))+
+   kv("Room per night",esc(p.wtp_hotel_room_two_breakfast))+kv("Dinner per person",esc(p.wtp_dinner_pp_drinks))+kv("In their own words",esc(p.open_anything_missing))+
+   kv("Language",esc(p.language))+kv("Duration (s)",esc(p.duration_s))+kv("Version",esc(p.version))+'</dl>'+
+   '<div style="display:flex;justify-content:flex-end"><button class="btn sm" id="ddel" style="color:var(--bad)">Delete this response</button></div></div></div>';
   qs("#mod").innerHTML=h;
   qs("#dx").onclick=function(){qs("#mod").innerHTML="";};
   qs("#dm").onclick=function(e){if(e.target.id==="dm")qs("#mod").innerHTML="";};
   qs("#ddel").onclick=function(){
-    if(!window.confirm("Apagar esta resposta para sempre?"))return;
+    if(!window.confirm("Delete this response permanently?"))return;
     sb.from("responses").delete().eq("session_id",r.session_id).then(function(x){
-      if(x.error){window.alert("Não foi possível apagar: "+x.error.message);return;}
+      if(x.error){window.alert("Could not delete: "+x.error.message);return;}
       ST.rows=ST.rows.filter(function(y){return y.session_id!==r.session_id;});qs("#mod").innerHTML="";paint();});
   };
 }
@@ -315,37 +322,54 @@ function exportCsv(rows){
   var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="holiday-study-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();document.body.removeChild(a);
 }
 
-/* ---------- textos ---------- */
+/* ---------- survey texts ---------- */
 function loadTexts(cb){
-  var n=0,done=function(){if(++n===2){cb();}};
-  fetch("texts.json",{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){ST.texts=j;done();}).catch(function(){ST.err="Não foi possível ler texts.json.";done();});
-  sb.from("text_overrides").select("lang,key,value").then(function(r){ST.ovr={};(r.data||[]).forEach(function(o){ST.ovr[o.lang+"|"+o.key]=o.value;});if(r.error)ST.err="Erro ao ler textos: "+r.error.message;done();});
+  var n=0,done=function(){if(++n===3){cb();}};
+  var fileMsg=location.protocol==="file:"?"Browsers block reading texts.json from a local file. Open the published admin page instead.":"Could not read texts.json.";
+  fetch("texts.json",{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){ST.texts=j;done();}).catch(function(){ST.err=fileMsg;done();});
+  fetch("texts_groups.json",{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){ST.groups=j;done();}).catch(function(){ST.groups=null;done();});
+  sb.from("text_overrides").select("lang,key,value").then(function(r){ST.ovr={};(r.data||[]).forEach(function(o){ST.ovr[o.lang+"|"+o.key]=o.value;});if(r.error)ST.err="Error reading texts: "+r.error.message;done();});
+}
+function screensList(){
+  var seen={},gs=(ST.groups||[]).map(function(g){return {id:g.id,title:g.title,keys:g.keys.filter(function(k){if(k in ST.texts&&!seen[k]){seen[k]=1;return true;}return false;})};});
+  var rest=Object.keys(ST.texts).filter(function(k){return !seen[k];});
+  if(rest.length)gs.push({id:"other",title:gs.length?"Other texts":"All texts",keys:rest});
+  return gs.filter(function(g){return g.keys.length;});
+}
+function textRow(k){
+  var en=ST.ovr["en|"+k]!=null?ST.ovr["en|"+k]:k, pt=ST.ovr["pt|"+k]!=null?ST.ovr["pt|"+k]:ST.texts[k];
+  var ed=ST.ovr["en|"+k]!=null||ST.ovr["pt|"+k]!=null, ro=ST.unlocked?'':' readonly';
+  return '<div class="trow'+(ed?' edited':'')+'" data-k="'+esc(k)+'"><div class="two"><div><label>English</label><textarea data-l="en"'+ro+'>'+esc(en)+'</textarea></div><div><label>Portuguese</label><textarea data-l="pt"'+ro+'>'+esc(pt)+'</textarea></div></div>'+
+   (ST.unlocked?'<div class="act"><button class="btn sm pri" data-save="1">Save</button><button class="btn sm" data-reset="1">Reset to original</button><span class="st">'+(ed?"edited":"")+'</span></div>':(ed?'<div class="act"><span class="st">edited</span></div>':''))+'</div>';
 }
 function textsView(v){
-  if(!ST.texts){v.innerHTML='<p class="msg">A carregar...</p>';loadTexts(function(){paint();});return;}
-  var keys=Object.keys(ST.texts);
-  var q=ST.tq.toLowerCase();
-  var list=keys.filter(function(k){if(!q)return true;return k.toLowerCase().indexOf(q)>-1||String(ST.texts[k]).toLowerCase().indexOf(q)>-1||(ST.ovr["en|"+k]||"").toLowerCase().indexOf(q)>-1||(ST.ovr["pt|"+k]||"").toLowerCase().indexOf(q)>-1;});
-  var h='<h2>Editar textos</h2><p class="msg" style="margin-top:-4px">Só para pequenas correções de linguagem (gralhas, definições, exemplos). Não acrescenta nem tira perguntas. As respostas já guardadas não são afetadas: guardam sempre o nome original de cada opção. As alterações aparecem no questionário em poucos segundos.</p>'+
-   '<div class="filters"><input type="search" id="tq" placeholder="Pesquisar texto..." value="'+esc(ST.tq)+'" style="max-width:380px"><span class="tag">'+list.length+' textos</span>'+(ST.unlocked?'<button class="btn sm" id="lockb">Bloquear</button>':'<button class="btn sm pri" id="editb">Editar</button><span class="tag">🔒 bloqueado (só leitura)</span>')+'</div>'+
-   (ST.unlocked||!ST.askpw?'':'<div class="card" style="padding:14px;margin:10px 0"><label for="epw" style="font-weight:700;font-size:.85rem">Confirme a sua palavra-passe para editar</label><div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"><input type="password" id="epw" autocomplete="current-password" style="max-width:260px"><button class="btn sm pri" id="epwok">Desbloquear</button><button class="btn sm" id="epwno">Cancelar</button></div><p class="msg bad" id="epwmsg"></p></div>');
-  list.slice(0,ST.tshow).forEach(function(k,i){
-    var en=ST.ovr["en|"+k]!=null?ST.ovr["en|"+k]:k, pt=ST.ovr["pt|"+k]!=null?ST.ovr["pt|"+k]:ST.texts[k];
-    var ed=ST.ovr["en|"+k]!=null||ST.ovr["pt|"+k]!=null;
-    h+='<div class="trow'+(ed?' edited':'')+'" data-k="'+esc(k)+'"><p class="o">Original: '+esc(k.length>140?k.slice(0,140)+"...":k)+'</p><div class="two"><div><label>English</label><textarea data-l="en"'+(ST.unlocked?'':' readonly')+'>'+esc(en)+'</textarea></div><div><label>Português</label><textarea data-l="pt"'+(ST.unlocked?'':' readonly')+'>'+esc(pt)+'</textarea></div></div>'+(ST.unlocked?'<div class="act"><button class="btn sm pri" data-save="1">Guardar</button><button class="btn sm" data-reset="1">Repor original</button><span class="st">'+(ed?"editado":"")+'</span></div>':'<div class="act"><span class="st">'+(ed?"editado":"")+'</span></div>')+'</div>';});
-  if(list.length>ST.tshow)h+='<p style="text-align:center"><button class="btn" id="more">Mostrar mais</button></p>';
+  if(!ST.texts){v.innerHTML='<p class="msg">Loading...</p>';loadTexts(function(){paint();});return;}
+  var all=screensList(),q=ST.tq.toLowerCase();
+  var match=function(k){return !q||k.toLowerCase().indexOf(q)>-1||String(ST.texts[k]).toLowerCase().indexOf(q)>-1||(ST.ovr["en|"+k]||"").toLowerCase().indexOf(q)>-1||(ST.ovr["pt|"+k]||"").toLowerCase().indexOf(q)>-1;};
+  var cur=all.filter(function(g){return g.id===ST.scr;})[0]||all[0];
+  var show=q?all.map(function(g){return {id:g.id,title:g.title,keys:g.keys.filter(match)};}).filter(function(g){return g.keys.length;}):(cur?[cur]:[]);
+  var count=show.reduce(function(n,g){return n+g.keys.length;},0);
+  var h='<h2>Survey</h2><p class="msg" style="margin-top:-4px">Every text of the questionnaire, in the same order as the screens respondents see. Only for small language fixes (typos, definitions, examples). It does not add or remove questions. Responses already saved are not affected: they always store the original name of each option. Changes show up in the survey within a few seconds.</p>'+
+   '<div class="filters"><input type="search" id="tq" placeholder="Search text..." value="'+esc(ST.tq)+'" style="max-width:380px"><span class="tag">'+count+' texts</span>'+(ST.unlocked?'<button class="btn sm" id="lockb">Lock</button>':'<button class="btn sm pri" id="editb">Edit</button><span class="tag">🔒 locked (read only)</span>')+'</div>'+
+   (ST.unlocked||!ST.askpw?'':'<div class="card" style="padding:14px;margin:10px 0"><label for="epw" style="font-weight:700;font-size:.85rem">Confirm your password to edit</label><div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"><input type="password" id="epw" autocomplete="current-password" style="max-width:260px"><button class="btn sm pri" id="epwok">Unlock</button><button class="btn sm" id="epwno">Cancel</button></div><p class="msg bad" id="epwmsg"></p></div>');
+  if(!q)h+='<nav class="screens">'+all.map(function(g){return '<button data-s="'+esc(g.id)+'"'+(cur&&g.id===cur.id?' class="on"':'')+'>'+esc(g.title)+'</button>';}).join("")+'</nav>';
+  show.forEach(function(g){
+    var idx=all.indexOf(g),pctDone=all.length>1?Math.round(idx/(all.length-1)*100):0;
+    h+='<section class="scr"><div class="scrbar"><i style="width:'+pctDone+'%"></i></div><h3>'+esc(g.title)+'</h3>'+g.keys.map(textRow).join("")+'</section>';
+  });
+  if(!show.length)h+='<p class="empty">No texts found.</p>';
   v.innerHTML=h;
-  var tq=qs("#tq");tq.oninput=function(){ST.tq=this.value;ST.tshow=30;var pos=this.selectionStart;paint();var t2=qs("#tq");t2.focus();t2.setSelectionRange(pos,pos);};
+  var tq=qs("#tq");tq.oninput=function(){ST.tq=this.value;var pos=this.selectionStart;paint();var t2=qs("#tq");t2.focus();t2.setSelectionRange(pos,pos);};
+  Array.prototype.forEach.call(v.querySelectorAll("nav.screens button"),function(b){b.onclick=function(){ST.scr=b.getAttribute("data-s");paint();window.scrollTo(0,0);};});
   var eb=qs("#editb");if(eb)eb.onclick=function(){ST.askpw=true;paint();var e=qs("#epw");if(e)e.focus();};
   var lb=qs("#lockb");if(lb)lb.onclick=function(){ST.unlocked=false;ST.askpw=false;paint();};
   var no=qs("#epwno");if(no)no.onclick=function(){ST.askpw=false;paint();};
   var ok=qs("#epwok");if(ok){var go=function(){
-    var m=qs("#epwmsg");m.textContent="A verificar...";
+    var m=qs("#epwmsg");m.textContent="Checking...";
     sb.auth.signInWithPassword({email:ST.user.email,password:qs("#epw").value}).then(function(r){
-      if(r.error){m.textContent="Palavra-passe incorreta.";return;}
+      if(r.error){m.textContent="Wrong password.";return;}
       ST.unlocked=true;ST.askpw=false;paint();});};
     ok.onclick=go;qs("#epw").onkeydown=function(e){if(e.key==="Enter")go();};}
-  var more=qs("#more");if(more)more.onclick=function(){ST.tshow+=30;paint();};
   Array.prototype.forEach.call(v.querySelectorAll(".trow"),function(row){
     if(!ST.unlocked)return;
     var k=row.getAttribute("data-k"),st=qs(".st",row);
@@ -361,10 +385,10 @@ function saveRow(row,k,st){
     if(!val||val===def){if(ST.ovr[id]!=null){ops.push(sb.from("text_overrides").delete().eq("lang",p[0]).eq("key",k).then(function(r){if(!r.error)delete ST.ovr[id];return r;}));}}
     else if(ST.ovr[id]!==val){ops.push(sb.from("text_overrides").upsert({lang:p[0],key:k,value:val,updated_by:who,updated_at:new Date().toISOString()}).then(function(r){if(!r.error)ST.ovr[id]=val;return r;}));}
   });
-  st.textContent="a guardar...";
+  st.textContent="saving...";
   Promise.all(ops).then(function(rs){
     var bad=rs.filter(function(r){return r&&r.error;})[0];
-    st.textContent=bad?"erro: "+bad.error.message:(ST.ovr["en|"+k]!=null||ST.ovr["pt|"+k]!=null?"guardado":"original");
+    st.textContent=bad?"error: "+bad.error.message:(ST.ovr["en|"+k]!=null||ST.ovr["pt|"+k]!=null?"saved":"original");
     row.classList.toggle("edited",ST.ovr["en|"+k]!=null||ST.ovr["pt|"+k]!=null);
   });
 }
