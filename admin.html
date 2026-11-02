@@ -236,6 +236,7 @@ function overviewView(v){
    bars("Frequency",tally(rows,function(r){return P(r).frequency;},FREQ),T)+
    bars("Nights on last visit",tally(rows,function(r){return P(r).nights_last_visit;},NIGHTS),T)+
    bars("Travelled with",tally(rows,function(r){return P(r).travelled_with_last_visit;}),T)+
+   bars("Family group (besides the respondent)",tally(rows,function(r){return P(r).family_group;}),T,{note:"Only people who travelled with family; each can choose several."})+
    bars("Main reason for the visit",tally(rows,function(r){return P(r).entry_point;}),T)+
    ranks("What mattered most (ranking)",rows,function(r){return P(r).vertical_rank;})+
    '</div>';
@@ -282,7 +283,7 @@ function detail(r){
   var h='<div class="modal" id="dm"><div class="sheet"><div style="display:flex;justify-content:space-between;gap:10px"><div><h3>'+esc(p.in_target_place?p.destination:(p.other_destination||"Other place"))+'</h3><span class="tag">'+esc(fmtDate(r.created_at))+'</span></div><button class="btn sm" id="dx">Close</button></div>'+
    (isScreened(r)?'<p class="msg bad">Excluded: '+esc(p.screened_out)+'</p>':'')+
    '<dl class="kv">'+kv("Gender",esc(p.gender))+kv("Age",esc(p.age))+kv("Residence",esc(p.residence))+kv("Loyalty programmes",esc((p.loyalty_memberships||[]).join(", ")))+
-   kv("Frequency",esc(p.frequency))+kv("Last visit",esc(p.nights_last_visit))+kv("Travelled with",esc(p.travelled_with_last_visit))+kv("Main reason",esc(p.entry_point)+(p.entry_point_other?": "+esc(p.entry_point_other):""))+
+   kv("Frequency",esc(p.frequency))+kv("Last visit",esc(p.nights_last_visit))+kv("Travelled with",esc(p.travelled_with_last_visit)+(p.family_group&&p.family_group.length?" ("+esc(p.family_group.join(", "))+")":""))+kv("Main reason",esc(p.entry_point)+(p.entry_point_other?": "+esc(p.entry_point_other):""))+
    kv("What mattered",ol(p.vertical_rank))+kv("Mechanisms",ol(p.mechanism_rank))+kv("Benefits",ol(p.benefit_rank))+
    kv("Bundle: join",esc(b.enter))+kv("Bundle: earn",esc(b.earn))+kv("Bundle: level up",esc(b.level_up))+kv("Bundle: benefits",ol(b.benefits))+
    kv("Free or paid",esc(p.program_type))+kv("Annual fee",esc(p.fee_band))+kv("Activities",esc(p.cross_use))+kv("Reach",esc(p.geo_reach))+
@@ -300,11 +301,11 @@ function detail(r){
   };
 }
 function exportCsv(rows){
-  var cols=["created_at","session_id","language","gender","age","residence","destination","other_destination","in_target_place","screened_out","frequency","nights_last_visit","travelled_with_last_visit","entry_point","entry_point_other","vertical_rank","mechanism_rank","benefit_rank","program_type","fee_band","cross_use","geo_reach","built_enter","built_earn","built_level_up","built_benefits","loyalty_memberships","wtp_hotel_room_two_breakfast","wtp_dinner_pp_drinks","open_anything_missing","duration_s","presented_order"];
+  var cols=["created_at","session_id","language","gender","age","residence","destination","other_destination","in_target_place","screened_out","frequency","nights_last_visit","travelled_with_last_visit","family_group","entry_point","entry_point_other","vertical_rank","mechanism_rank","benefit_rank","program_type","fee_band","cross_use","geo_reach","built_enter","built_earn","built_level_up","built_benefits","loyalty_memberships","wtp_hotel_room_two_breakfast","wtp_dinner_pp_drinks","open_anything_missing","duration_s","presented_order"];
   function cell(x){if(x==null)return "";if(Array.isArray(x))x=x.join(" > ");x=String(x).replace(/"/g,'""');return /[;"\n\r]/.test(x)?'"'+x+'"':x;}
   var lines=[cols.join(";")];
   rows.forEach(function(r){var p=P(r),b=p.program_built||{};
-    var m={created_at:r.created_at,session_id:r.session_id,built_enter:b.enter,built_earn:b.earn,built_level_up:b.level_up,built_benefits:b.benefits,presented_order:p.presented_order?JSON.stringify(p.presented_order):""};
+    var m={created_at:r.created_at,session_id:r.session_id,built_enter:b.enter,built_earn:b.earn,built_level_up:b.level_up,built_benefits:b.benefits,family_group:p.family_group?p.family_group.join(", "):"",presented_order:p.presented_order?JSON.stringify(p.presented_order):""};
     lines.push(cols.map(function(c){return cell(c in m?m[c]:p[c]);}).join(";"));});
   var blob=new Blob(["﻿"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
   var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="holiday-study-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();document.body.removeChild(a);
@@ -346,7 +347,7 @@ var METHOD=[
   "Accepted risk: the interactive format may change response style compared with a classic questionnaire. Mitigation: pilot and, if possible, compare time and quality of responses."]],
  ["Randomisation",[
   "The order of options changes for each person, to avoid position effects: the first and last options tend to be chosen more often. The order is drawn once per person and stays the same if they go back.",
-  "Randomised: places, main reason for the last visit, verticals, the 9 mechanisms, the 11 benefits, the options inside the programme builder, programme type (free, paid, upgrade), loyalty programmes held, and who they travelled with.",
+  "Randomised: places, main reason for the last visit, verticals, the 9 mechanisms, the 11 benefits, the options inside the programme builder, and loyalty programmes held. Questions with a natural order keep it fixed: gender, age, frequency, nights, who they travelled with (alone, couple, friends, club, family) and programme type (free, paid, upgrade).",
   "Always last, never randomised: “None of these” (places and loyalty programmes), “Something else” (main reason), “No preference” and “One level is fine” (builder), and “Prefer not to say” (budget bands).",
   "Not randomised: gender, age, residence and the ordered scales (frequency, nights, annual fee bands, hotel and dinner bands), activities and geographic reach, which also run from narrow to wide.",
   "The order of the blocks is fixed, from the most general to the most specific, and the five tasks of the programme hub always run in the same order.",
