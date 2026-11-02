@@ -91,7 +91,7 @@ if(!C.SUPABASE_URL||!C.SUPABASE_ANON_KEY||!window.supabase){
   app.innerHTML='<div class="login"><div class="card"><h3>Falta configurar</h3><p class="msg">Preencha SUPABASE_URL e SUPABASE_ANON_KEY no ficheiro config.js (ver LEIA-ME.md).</p></div></div>';return;
 }
 var sb=window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-var ST={tab:"overview",rows:[],filter:"all",user:null,texts:null,ovr:{},tq:"",tshow:30,detail:null,loaded:false,err:null};
+var ST={tab:"overview",rows:[],filter:"all",user:null,texts:null,unlocked:false,ovr:{},tq:"",tshow:30,detail:null,loaded:false,err:null};
 
 /* ---------- link do questionario ---------- */
 function formUrl(){return C.SITE_URL||new URL("./",location.href).href;}
@@ -146,7 +146,7 @@ function shell(){
     else window.open("https://wa.me/?text="+encodeURIComponent(shareMsg()),"_blank");
   };
   qs("#out").onclick=function(){sb.auth.signOut().then(function(){ST.user=null;ST.loaded=false;loginView();});};
-  Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.onclick=function(){ST.tab=b.getAttribute("data-t");paint();};});
+  Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.onclick=function(){ST.tab=b.getAttribute("data-t");if(ST.tab!=="texts")ST.unlocked=false;paint();};});
   paint();
 }
 function paint(){
@@ -327,16 +327,27 @@ function textsView(v){
   var q=ST.tq.toLowerCase();
   var list=keys.filter(function(k){if(!q)return true;return k.toLowerCase().indexOf(q)>-1||String(ST.texts[k]).toLowerCase().indexOf(q)>-1||(ST.ovr["en|"+k]||"").toLowerCase().indexOf(q)>-1||(ST.ovr["pt|"+k]||"").toLowerCase().indexOf(q)>-1;});
   var h='<h2>Editar textos</h2><p class="msg" style="margin-top:-4px">Só para pequenas correções de linguagem (gralhas, definições, exemplos). Não acrescenta nem tira perguntas. As respostas já guardadas não são afetadas: guardam sempre o nome original de cada opção. As alterações aparecem no questionário em poucos segundos.</p>'+
-   '<div class="filters"><input type="search" id="tq" placeholder="Pesquisar texto..." value="'+esc(ST.tq)+'" style="max-width:380px"><span class="tag">'+list.length+' textos</span></div>';
+   '<div class="filters"><input type="search" id="tq" placeholder="Pesquisar texto..." value="'+esc(ST.tq)+'" style="max-width:380px"><span class="tag">'+list.length+' textos</span>'+(ST.unlocked?'<button class="btn sm" id="lockb">Bloquear</button>':'<button class="btn sm pri" id="editb">Editar</button><span class="tag">🔒 bloqueado (só leitura)</span>')+'</div>'+
+   (ST.unlocked||!ST.askpw?'':'<div class="card" style="padding:14px;margin:10px 0"><label for="epw" style="font-weight:700;font-size:.85rem">Confirme a sua palavra-passe para editar</label><div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"><input type="password" id="epw" autocomplete="current-password" style="max-width:260px"><button class="btn sm pri" id="epwok">Desbloquear</button><button class="btn sm" id="epwno">Cancelar</button></div><p class="msg bad" id="epwmsg"></p></div>');
   list.slice(0,ST.tshow).forEach(function(k,i){
     var en=ST.ovr["en|"+k]!=null?ST.ovr["en|"+k]:k, pt=ST.ovr["pt|"+k]!=null?ST.ovr["pt|"+k]:ST.texts[k];
     var ed=ST.ovr["en|"+k]!=null||ST.ovr["pt|"+k]!=null;
-    h+='<div class="trow'+(ed?' edited':'')+'" data-k="'+esc(k)+'"><p class="o">Original: '+esc(k.length>140?k.slice(0,140)+"...":k)+'</p><div class="two"><div><label>English</label><textarea data-l="en">'+esc(en)+'</textarea></div><div><label>Português</label><textarea data-l="pt">'+esc(pt)+'</textarea></div></div><div class="act"><button class="btn sm pri" data-save="1">Guardar</button><button class="btn sm" data-reset="1">Repor original</button><span class="st">'+(ed?"editado":"")+'</span></div></div>';});
+    h+='<div class="trow'+(ed?' edited':'')+'" data-k="'+esc(k)+'"><p class="o">Original: '+esc(k.length>140?k.slice(0,140)+"...":k)+'</p><div class="two"><div><label>English</label><textarea data-l="en"'+(ST.unlocked?'':' readonly')+'>'+esc(en)+'</textarea></div><div><label>Português</label><textarea data-l="pt"'+(ST.unlocked?'':' readonly')+'>'+esc(pt)+'</textarea></div></div>'+(ST.unlocked?'<div class="act"><button class="btn sm pri" data-save="1">Guardar</button><button class="btn sm" data-reset="1">Repor original</button><span class="st">'+(ed?"editado":"")+'</span></div>':'<div class="act"><span class="st">'+(ed?"editado":"")+'</span></div>')+'</div>';});
   if(list.length>ST.tshow)h+='<p style="text-align:center"><button class="btn" id="more">Mostrar mais</button></p>';
   v.innerHTML=h;
   var tq=qs("#tq");tq.oninput=function(){ST.tq=this.value;ST.tshow=30;var pos=this.selectionStart;paint();var t2=qs("#tq");t2.focus();t2.setSelectionRange(pos,pos);};
+  var eb=qs("#editb");if(eb)eb.onclick=function(){ST.askpw=true;paint();var e=qs("#epw");if(e)e.focus();};
+  var lb=qs("#lockb");if(lb)lb.onclick=function(){ST.unlocked=false;ST.askpw=false;paint();};
+  var no=qs("#epwno");if(no)no.onclick=function(){ST.askpw=false;paint();};
+  var ok=qs("#epwok");if(ok){var go=function(){
+    var m=qs("#epwmsg");m.textContent="A verificar...";
+    sb.auth.signInWithPassword({email:ST.user.email,password:qs("#epw").value}).then(function(r){
+      if(r.error){m.textContent="Palavra-passe incorreta.";return;}
+      ST.unlocked=true;ST.askpw=false;paint();});};
+    ok.onclick=go;qs("#epw").onkeydown=function(e){if(e.key==="Enter")go();};}
   var more=qs("#more");if(more)more.onclick=function(){ST.tshow+=30;paint();};
   Array.prototype.forEach.call(v.querySelectorAll(".trow"),function(row){
+    if(!ST.unlocked)return;
     var k=row.getAttribute("data-k"),st=qs(".st",row);
     qs("[data-save]",row).onclick=function(){saveRow(row,k,st);};
     qs("[data-reset]",row).onclick=function(){
