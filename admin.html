@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>Customer Survey | Team</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%233b4b56%27/%3E%3C/svg%3E">
 <style>
 :root{color-scheme:light;--bg:#fff;--panel:#f4f5f7;--ink:#12151a;--muted:#5f6673;--line:#e1e4e9;--accent:#3b4b56;--accent-soft:#e8edf0;--ok:#2f6b4f;--bad:#a63d3d}
@@ -76,8 +78,15 @@ tr.click{cursor:pointer}tr.click:hover{background:var(--panel)}
 .screens button.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .scr{max-width:760px;margin:6px auto 24px;background:#fff;border:1px solid var(--line);border-radius:24px;padding:20px 22px;box-shadow:0 8px 30px rgba(0,0,0,.05)}
 .scr h3{font-size:1.35rem;letter-spacing:-.02em;margin:10px 0 14px}
-.scrbar{height:5px;border-radius:99px;background:var(--panel);overflow:hidden}
-.scrbar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.scrtop{display:flex;justify-content:space-between;font-weight:700;font-size:.95rem;margin-bottom:10px}
+.stages{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.stg i{display:block;height:4px;border-radius:9px;background:var(--line)}
+.stg.on i{background:var(--accent)}
+.stg span{display:block;font:700 .6rem/1.5 inherit;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.stg.on span{color:var(--ink)}
+.scr h3{font-size:1.7rem;font-weight:800;letter-spacing:-.03em;margin:22px 0 14px}
+.scr .trow{border-radius:16px;background:var(--panel);border-color:transparent}
+.scr textarea{background:#fff;font-weight:600}
 </style>
 </head>
 <body>
@@ -350,8 +359,8 @@ function textsView(v){
    (ST.unlocked||!ST.askpw?'':'<div class="card" style="padding:14px;margin:10px 0"><label for="epw" style="font-weight:700;font-size:.85rem">Confirm your password to edit</label><div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"><input type="password" id="epw" autocomplete="current-password" style="max-width:260px"><button class="btn sm pri" id="epwok">Unlock</button><button class="btn sm" id="epwno">Cancel</button></div><p class="msg bad" id="epwmsg"></p></div>');
   if(!q)h+='<nav class="screens">'+all.map(function(g){return '<button data-s="'+esc(g.id)+'"'+(cur&&g.id===cur.id?' class="on"':'')+'>'+esc(g.title)+'</button>';}).join("")+'</nav>';
   show.forEach(function(g){
-    var idx=all.indexOf(g),pctDone=all.length>1?Math.round(idx/(all.length-1)*100):0;
-    h+='<section class="scr"><div class="scrbar"><i style="width:'+pctDone+'%"></i></div><h3>'+esc(g.title)+'</h3>'+g.keys.map(textRow).join("")+'</section>';
+    var sg=(ST.groups||[]).filter(function(x){return x.id===g.id;})[0],si=sg&&sg.stage!=null?sg.stage:-1;
+    h+='<section class="scr"><div class="scrtop"><span>Holiday &amp; leisure in Portugal</span><span>PT</span></div><div class="stages">'+["Profile","Holiday","Preferences","Foundation","Bundle"].map(function(n,i){return '<div class="stg'+(i<=si?' on':'')+'"><i></i><span>'+n+'</span></div>';}).join("")+'</div><h3>'+esc(g.title.replace(/^\d+\.\s*/,""))+'</h3>'+g.keys.map(textRow).join("")+'</section>';
   });
   if(!show.length)h+='<p class="empty">No texts found.</p>';
   v.innerHTML=h;

@@ -60,7 +60,7 @@ h3{font:700 1.02rem/1.4 var(--f);margin:0 0 12px;letter-spacing:-.015em}
 .hint{color:var(--muted);font-size:.9rem;margin:-6px 0 12px}
 .defbox .dh{display:block;margin-top:4px;font-size:.85rem}
 .ihint{display:flex;align-items:center;gap:8px;margin:10px 0 0;color:var(--muted);font-size:.85rem;font-weight:600}
-.ihint .ii{flex:none;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;font:700 .72rem/1 Georgia,serif;font-style:italic;color:var(--ink)}
+.ii{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--muted);color:var(--ink);font:700 .68rem/1 Georgia,serif;font-style:italic;vertical-align:-3px;margin:0 1px}
 .vgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0 4px}
 .vi{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;font-size:.72rem;line-height:1.2;color:var(--muted);font-weight:600}
 .vi i{width:100%;max-width:64px;aspect-ratio:1;border-radius:18px;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:17px;display:block}
@@ -645,7 +645,8 @@ function listHTML(dk){
 function deckDone(dk){var R=A.react[dk];return DECKS[dk].items.every(function(x){return !!R[x.k];});}
 function deckCount(dk){var R=A.react[dk];return DECKS[dk].items.filter(function(x){return !!R[x.k];}).length;}
 function allBuilt(){var b=A.build||{};return BSLOTS.map(function(x){return b[x];}).filter(Boolean);}
-function infoHint(){return '<p class="ihint"><span class="ii" aria-hidden="true">i</span><span>(Click the i for more information)</span></p>';}
+function iconHints(root){var els=root.querySelectorAll(".dh,.ihint>span");for(var i=0;i<els.length;i++){var t=els[i].textContent;if(/ i /.test(t))els[i].innerHTML=esc(t).replace(/ i /,' <span class="ii" aria-hidden="true">i</span> ');}}
+function infoHint(){return '<p class="ihint"><span>(Click the i for more information)</span></p>';}
 function infoBtn(dk,it){return '<span class="info" role="button" tabindex="0" data-info="'+dk+':'+esc(it.k)+'" aria-label="Definition of '+esc(it.l)+'">i</span>';}
 function pickerHTML(){
   var sl=S.pick;var b=A.build||{};var role=byKey(ROLES,sl);var list,title,sub;
@@ -829,6 +830,7 @@ function render(keepScroll){
   var vis2=main.querySelectorAll(".vgrid .vi");for(var vi=0;vi<vis2.length;vi++)vis2[vi].style.setProperty("--n",vi);
   var stc=main.querySelectorAll(".stamp");for(var si=0;si<stc.length;si++)stc[si].style.setProperty("--n",si);
   if(!st.raw)trDom(main);
+  iconHints(main);
   document.getElementById("ttl").textContent=st.raw?"Holiday & leisure in Portugal":trs("Holiday & leisure in Portugal");
   var lg=document.getElementById("lg");lg.textContent=S.lang==="pt"?"EN":"PT";lg.style.visibility=S.langOk?"visible":"hidden";bBack.setAttribute("aria-label",trs("Back"));
   updateNav();
@@ -952,10 +954,10 @@ document.addEventListener("click",function(e){
 function nextQ(key){
   setTimeout(function(){
     var bx=main.querySelector('[data-q="'+key+'"]');if(!bx)return;var sec=bx.closest(".q");if(!sec)return;
-    var n=sec.nextElementSibling;while(n&&!(n.classList&&n.classList.contains("q")))n=n.nextElementSibling;
+    var n=sec.nextElementSibling;while(n&&!(n.classList&&n.classList.contains("q")&&!n.querySelector(".opt.on")))n=n.nextElementSibling;
     if(!n)return;
     var r=n.getBoundingClientRect();
-    if(r.top>window.innerHeight*0.5||r.top<120){window.scrollTo({top:Math.max(0,window.pageYOffset+r.top-130),behavior:"smooth"});}
+    if(Math.abs(r.top-130)>24){window.scrollTo({top:Math.max(0,window.pageYOffset+r.top-130),behavior:"smooth"});}
   },280);
 }
 document.addEventListener("keydown",function(e){if((e.key==="Enter"||e.key===" ")&&e.target.getAttribute&&e.target.getAttribute("data-info")){e.preventDefault();S.info=e.target.getAttribute("data-info");render(true);return;}

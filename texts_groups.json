@@ -25,7 +25,8 @@
    "Spa, yoga, nature",
    "Nightlife",
    "Bars and clubs"
-  ]
+  ],
+  "stage": -1
  },
  {
   "id": "about",
@@ -55,7 +56,8 @@
    "Leisure, sports or wellness",
    "Credit card rewards",
    "None of these"
-  ]
+  ],
+  "stage": 0
  },
  {
   "id": "m1",
@@ -64,7 +66,8 @@
    "Continue",
    "Profile created",
    "Now let's get to know your holidays."
-  ]
+  ],
+  "stage": 1
  },
  {
   "id": "places",
@@ -78,7 +81,8 @@
    "Tróia peninsula",
    "Almada, south of Lisbon",
    "Eastern Algarve"
-  ]
+  ],
+  "stage": 1
  },
  {
   "id": "otherplace",
@@ -89,7 +93,8 @@
    "Name of the place",
    "Where do you usually go on holiday",
    "I did not go on holiday in the last 3 years."
-  ]
+  ],
+  "stage": 1
  },
  {
   "id": "trip",
@@ -112,7 +117,8 @@
    "Every two years",
    "Every three years or less",
    "This was my first time"
-  ]
+  ],
+  "stage": 1
  },
  {
   "id": "reason",
@@ -123,14 +129,16 @@
    "What is the main reason?",
    "Other main reason",
    "Think about the last time you were there. Pick the one that fits best."
-  ]
+  ],
+  "stage": 1
  },
  {
   "id": "rank",
   "title": "8. Ranking",
   "keys": [
    "Your main reason is already first. Add the rest."
-  ]
+  ],
+  "stage": 1
  },
  {
   "id": "m2",
@@ -138,7 +146,8 @@
   "keys": [
    "Holiday profile ready",
    "Next, you design your ideal loyalty program."
-  ]
+  ],
+  "stage": 2
  },
  {
   "id": "hub",
@@ -159,7 +168,8 @@
    "Put it together",
    "Build your bundle",
    "Combine your choices into your ideal program"
-  ]
+  ],
+  "stage": 2
  },
  {
   "id": "rm",
@@ -232,7 +242,8 @@
    "Receive recognition because you own an asset, for instance a property within the destination. You do not need to pay a fee or join in any other way.",
    "A shareholder of the golf club gets access to the whole program",
    "Paid membership, where you pay a fee for access and do not need to own anything."
-  ]
+  ],
+  "stage": 2
  },
  {
   "id": "rb",
@@ -317,7 +328,8 @@
    "Preferred tee times at the golf course",
    "A priority phone line",
    "Exclusive experiences and spaces, which is about events and places reserved for members. A simple way to remember: services are how you are looked after, experiences and spaces are where you can go and what you can attend."
-  ]
+  ],
+  "stage": 2
  },
  {
   "id": "build",
@@ -334,7 +346,8 @@
    "How you collect rewards",
    "Level up",
    "How you reach a higher status"
-  ]
+  ],
+  "stage": 4
  },
  {
   "id": "build2",
@@ -359,7 +372,8 @@
    "Benefits from one activity can be enjoyed in others",
    "All my holiday activities",
    "One experience that connects everything I do on holiday"
-  ]
+  ],
+  "stage": 3
  },
  {
   "id": "pay",
@@ -368,7 +382,8 @@
    "Your holiday budget",
    "For a hotel room for two people with breakfast included, what is the most you would pay per night?",
    "Going out for dinner on holiday, what is the most you would pay per person, drinks included?"
-  ]
+  ],
+  "stage": 3
  },
  {
   "id": "open",
@@ -378,7 +393,8 @@
    "In your own words",
    "Optional, but very helpful.",
    "Is there anything you value that we have not asked about?"
-  ]
+  ],
+  "stage": 4
  },
  {
   "id": "pass",
@@ -408,7 +424,8 @@
    "Preferences",
    "Foundation",
    "Bundle"
-  ]
+  ],
+  "stage": 4
  },
  {
   "id": "shared",
