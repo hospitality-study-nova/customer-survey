@@ -208,7 +208,7 @@ function ranks(title,rows,get,note){
 /* ---------- visao geral ---------- */
 var AGE=["18 to 24","25 to 34","35 to 44","45 to 54","55 to 64","65 or older"];
 var GENDER=["Male","Female","Non binary","Prefer not to say"];
-var FREQ=["More than once a year","Once a year","Every two years","Every three years or less","This was my first time"];
+var FREQ=["More than once a year","Once a year","Every two years","Every three years or less often","This was my first time"];
 var NIGHTS=["1 night","2 to 3 nights","4 to 7 nights","8 to 14 nights","15 nights or more"];
 function overviewView(v){
   var all=complete(),rows=filtered(),T=rows.length;
@@ -321,11 +321,11 @@ var METHOD=[
   "Market tiers: Tróia Luxury, Vilamoura Premium, Lagos Mid market, Albufeira Mass. Aroeira and Castro Marim have no tier yet."]],
  ["Questionnaire structure (as built)",[
   "1. Language (English or Portuguese, starting from the browser language) and a cover with an explicit consent box.",
-  "2. Profile: gender, age, residence and loyalty programmes already held. Milestone: “Profile created”.",
-  "3. Place: the one place they went to the most in the last 3 years (the 6 places, “None of these” or “I did not go on holiday”).",
+  "2. Profile: gender, age, which of four residence and nationality situations applies, and loyalty programmes already held, with a short definition of what a loyalty programme is. Milestone: “Profile created”.",
+  "3. Place: the one place they went to most often in the last 3 years, in the past tense (the 6 places or “None of these”). Those who went elsewhere name the place; those who did not go on holiday leave.",
   "4. Last visit to that place: how often they go, nights, who they travelled with, and the main reason for the visit.",
-  "5. Ranking of the holiday verticals (8, plus “Something else”): what mattered most on that visit. Milestone: “Holiday profile ready”.",
-  "6. Design your loyalty programme: five tasks in a fixed order, each unlocking the next. (a) Rank the 9 mechanisms. (b) Rank the 11 benefits. (c) The foundation: free, paid or free with an upgrade, the annual fee band if paid, how many activities, and geographic reach. (d) Budget: hotel room and dinner per person, in bands. (e) Build the bundle: how to enter, how to earn, how to level up, and up to 3 benefits.",
+  "5. A short animated example of how the ranking works (three neutral items, A, B and C), then the ranking of the holiday verticals (8, plus “Something else”): what mattered most on that visit. Milestone: “Holiday profile ready”.",
+  "6. Design your loyalty programme: five tasks in a fixed order, each unlocking the next. (a) Rank the 9 mechanisms. (b) Rank the 11 benefits. (c) The foundation: free, paid or free with an upgrade, the annual fee band if paid, how many activities (one only, mostly one, several) and geographic reach (local, regional, all of Portugal). The examples under each option use the person’s own top-ranked activity and chosen place. (d) Budget: hotel room and dinner per person, in bands. (e) Build the bundle: how to enter, how to earn, how to level up, and up to 3 benefits.",
   "7. One open question, then a thank-you page with a personal summary and a share link.",
   "Target duration: about 5 minutes, to be confirmed in the pilot. Web format designed for mobile, in English and Portuguese.",
   "Version in use: proto-0.6-hub. Checked against the live survey on 2 November 2026."]],
@@ -334,6 +334,8 @@ var METHOD=[
   "Option order is random for each person (see Randomisation) and no answer is pre-selected. Rankings start empty.",
   "All options have the same visual weight: same size, icons of the same style, no photographs and no brand or destination logos, to avoid creating associations. The only logo is the Nova SBE one on the cover.",
   "A single accent colour, a bluish slate grey. Green and red were avoided because they suggest right and wrong, and warm colours because they stimulate. The idea that cool, sober tones are more neutral comes from survey design practice and must be backed by literature before we cite it.",
+  "The reach question does not name the place, and its options are generic (local, regional, all of Portugal), so people are not anchored on one destination. The place only appears in the explanation below each option.",
+  "All three rankings ask for importance (“from the most important to the least important”), not what the person wants.",
   "Neutral language, no marketing adjectives. The cover says the programme is an illustration, not a real offer.",
   "The cover presents a Nova SBE student project and does not name the client, so as not to influence answers.",
   "Escape options are always available and always last: “None of these” (loyalty programmes), “Prefer not to say” (gender, hotel room and dinner bands), “Something else” (main reason) and “No preference” / “One level is fine” (Earn and Level up in the builder). Age and the annual fee bands have no “Prefer not to say”: age is needed to screen out under-18s, and the fee only appears for paid programmes."]],
