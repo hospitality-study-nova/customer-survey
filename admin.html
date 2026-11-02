@@ -65,28 +65,7 @@ tr.click{cursor:pointer}tr.click:hover{background:var(--panel)}
 .login .card{padding:22px}
 .login label{display:block;font-weight:700;font-size:.85rem;margin:12px 0 6px}
 .msg{margin:12px 0 0;font-size:.86rem;color:var(--muted)}.msg.bad{color:var(--bad)}.msg.ok{color:var(--ok)}
-.trow{border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:10px 0;background:#fff}
-.trow .o{color:var(--muted);font-size:.78rem;margin:0 0 8px}
-.trow .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.trow label{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
-.trow textarea{min-height:56px;resize:vertical;margin-top:4px}
-.trow .act{display:flex;gap:10px;align-items:center;margin-top:8px;font-size:.8rem;color:var(--muted)}
-.trow.edited{border-color:var(--accent)}
-@media(max-width:640px){.trow .two{grid-template-columns:1fr}.kv{grid-template-columns:1fr}.row{grid-template-columns:minmax(80px,42%) 1fr auto}}
-.screens{display:flex;gap:6px;overflow:auto;padding:4px 0 12px;margin:0 -2px}
-.screens button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:7px 12px;font-weight:700;font-size:.8rem;color:var(--muted);cursor:pointer;white-space:nowrap}
-.screens button.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.scr{max-width:760px;margin:6px auto 24px;background:#fff;border:1px solid var(--line);border-radius:24px;padding:20px 22px;box-shadow:0 8px 30px rgba(0,0,0,.05)}
-.scr h3{font-size:1.35rem;letter-spacing:-.02em;margin:10px 0 14px}
-.scrtop{display:flex;justify-content:space-between;font-weight:700;font-size:.95rem;margin-bottom:10px}
-.stages{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
-.stg i{display:block;height:4px;border-radius:9px;background:var(--line)}
-.stg.on i{background:var(--accent)}
-.stg span{display:block;font:700 .6rem/1.5 inherit;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:3px}
-.stg.on span{color:var(--ink)}
-.scr h3{font-size:1.7rem;font-weight:800;letter-spacing:-.03em;margin:22px 0 14px}
-.scr .trow{border-radius:16px;background:var(--panel);border-color:transparent}
-.scr textarea{background:#fff;font-weight:600}
+@media(max-width:640px){.kv{grid-template-columns:1fr}.row{grid-template-columns:minmax(80px,42%) 1fr auto}}
 .doc{max-width:860px}
 .doc .card{margin:14px 0}
 .doc ul{margin:8px 0 0;padding-left:20px}
@@ -111,7 +90,7 @@ if(!C.SUPABASE_URL||!C.SUPABASE_ANON_KEY||!window.supabase){
   app.innerHTML='<div class="login"><div class="card"><h3>Setup missing</h3><p class="msg">Fill in SUPABASE_URL and SUPABASE_ANON_KEY in config.js (see LEIA-ME.md).</p></div></div>';return;
 }
 var sb=window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-var ST={tab:"overview",rows:[],filter:"all",user:null,texts:null,groups:null,scr:null,unlocked:false,ovr:{},tq:"",tshow:30,detail:null,loaded:false,err:null};
+var ST={tab:"overview",rows:[],filter:"all",user:null,detail:null,loaded:false,err:null};
 
 /* ---------- questionnaire link ---------- */
 function formUrl(){return C.SITE_URL||new URL("./",location.href).href;}
@@ -159,17 +138,16 @@ sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_IN"&&!ST.user)boot();});
 function shell(){
   app.innerHTML='<header class="top"><div class="wrap"><div class="bar"><h1>Customer Survey<small>Private team area</small></h1>'+
    '<button class="btn pri sm" id="clink">Copy questionnaire link</button><a class="btn sm" id="tst" href="'+esc(formUrl()+'?test=1')+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Test survey (nothing is saved)</a><button class="btn sm" id="out">Sign out</button></div>'+
-   '<nav class="tabs"><button data-t="overview">Overview</button><button data-t="responses">Responses</button><button data-t="texts">Survey</button><button data-t="method">Methodology</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
+   '<nav class="tabs"><button data-t="overview">Overview</button><button data-t="responses">Responses</button><button data-t="method">Methodology</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
   qs("#clink").onclick=function(){copyText(formUrl(),this);};
   qs("#out").onclick=function(){sb.auth.signOut().then(function(){ST.user=null;ST.loaded=false;loginView();});};
-  Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.onclick=function(){ST.tab=b.getAttribute("data-t");if(ST.tab!=="texts")ST.unlocked=false;paint();};});
+  Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.onclick=function(){ST.tab=b.getAttribute("data-t");paint();};});
   paint();
 }
 function paint(){
   Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.classList.toggle("on",b.getAttribute("data-t")===ST.tab);});
   var v=qs("#view");
   if(ST.err){v.innerHTML='<p class="msg bad">'+esc(ST.err)+'</p>';return;}
-  if(ST.tab==="texts"){textsView(v);return;}
   if(ST.tab==="method"){methodView(v);return;}
   if(!ST.loaded){v.innerHTML='<p class="msg">A carregar...</p>';return;}
   if(ST.tab==="responses")responsesView(v);else overviewView(v);
@@ -387,7 +365,7 @@ var METHOD=[
   "The definitions start from those of Steering 1. The examples and supporting phrases are ours and should be reviewed by the team.",
   "The roles Enter, Earn and Level up only appear in the programme builder. In the rankings the mechanisms are treated together, as in the Steering.",
   "Earn and Level up have a “No preference” option.",
-  "Portuguese translation is a draft, to be reviewed by back-translation. All texts can be edited in the Survey tab, which is locked by default.",
+  "Portuguese translation is a draft, to be reviewed by back-translation. Text changes are made directly in the survey files.",
   "The data stores the English names and keys, and the language used."]],
  ["Academic feasibility and limits",[
   "Type of study: descriptive and comparative survey across places and tiers.",
@@ -397,7 +375,7 @@ var METHOD=[
   "Suggested base references, to verify before citing: Dillman, Smyth and Christian (2014) on online surveys; Krosnick (1991) on satisficing; Tourangeau, Couper and Conrad (2004) on visual and position effects; Deterding et al. (2011) on gamification.",
   "Limits: self-selection of people who answer online, an interactive format that may influence answers, 20 items to rank, our own translations, and missing tiers for Aroeira and Castro Marim."]],
  ["Status and next steps",[
-  "Status: working HTML prototype, connected to the database (Supabase). The Test survey button opens a mode where nothing is saved. The team area has the overview, individual responses with CSV export, and the editable survey texts.",
+  "Status: working HTML prototype, connected to the database (Supabase). The Test survey button opens a mode where nothing is saved. The team area has the overview and the individual responses with CSV export.",
   "Run one real submission and confirm it appears under Responses.",
   "Pilot with 10 people on mobile (5 per language), measuring the real response time.",
   "Links per place to control quotas. Not built: people choose their place in the survey, and the overview only shows progress against the goal of 30.",
@@ -410,77 +388,6 @@ function methodView(v){
   var h='<div class="doc"><h2>Survey methodology</h2><p class="msg" style="margin-top:-4px">Vera · 27 Oct 2026 · reviewed against the live survey on 2 Nov 2026</p>';
   METHOD.forEach(function(sec,i){h+='<section class="card"><h3>'+(i+1)+'. '+esc(sec[0])+'</h3><ul>'+sec[1].map(function(t){return '<li>'+esc(t)+'</li>';}).join("")+'</ul></section>';});
   v.innerHTML=h+'</div>';
-}
-
-/* ---------- survey texts ---------- */
-function loadTexts(cb){
-  var n=0,done=function(){if(++n===3){cb();}};
-  var fileMsg=location.protocol==="file:"?"Browsers block reading texts.json from a local file. Open the published admin page instead.":"Could not read texts.json.";
-  fetch("texts.json",{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){ST.texts=j;done();}).catch(function(){ST.err=fileMsg;done();});
-  fetch("texts_groups.json",{cache:"no-store"}).then(function(r){return r.json();}).then(function(j){ST.groups=j;done();}).catch(function(){ST.groups=null;done();});
-  sb.from("text_overrides").select("lang,key,value").then(function(r){ST.ovr={};(r.data||[]).forEach(function(o){ST.ovr[o.lang+"|"+o.key]=o.value;});if(r.error)ST.err="Error reading texts: "+r.error.message;done();});
-}
-function screensList(){
-  var seen={},gs=(ST.groups||[]).map(function(g){return {id:g.id,title:g.title,keys:g.keys.filter(function(k){if(k in ST.texts&&!seen[k]){seen[k]=1;return true;}return false;})};});
-  var rest=Object.keys(ST.texts).filter(function(k){return !seen[k];});
-  if(rest.length)gs.push({id:"other",title:gs.length?"Other texts":"All texts",keys:rest});
-  return gs.filter(function(g){return g.keys.length;});
-}
-function textRow(k){
-  var en=ST.ovr["en|"+k]!=null?ST.ovr["en|"+k]:k, pt=ST.ovr["pt|"+k]!=null?ST.ovr["pt|"+k]:ST.texts[k];
-  var ed=ST.ovr["en|"+k]!=null||ST.ovr["pt|"+k]!=null, ro=ST.unlocked?'':' readonly';
-  return '<div class="trow'+(ed?' edited':'')+'" data-k="'+esc(k)+'"><div class="two"><div><label>English</label><textarea data-l="en"'+ro+'>'+esc(en)+'</textarea></div><div><label>Portuguese</label><textarea data-l="pt"'+ro+'>'+esc(pt)+'</textarea></div></div>'+
-   (ST.unlocked?'<div class="act"><button class="btn sm pri" data-save="1">Save</button><button class="btn sm" data-reset="1">Reset to original</button><span class="st">'+(ed?"edited":"")+'</span></div>':(ed?'<div class="act"><span class="st">edited</span></div>':''))+'</div>';
-}
-function textsView(v){
-  if(!ST.texts){v.innerHTML='<p class="msg">Loading...</p>';loadTexts(function(){paint();});return;}
-  var all=screensList(),q=ST.tq.toLowerCase();
-  var match=function(k){return !q||k.toLowerCase().indexOf(q)>-1||String(ST.texts[k]).toLowerCase().indexOf(q)>-1||(ST.ovr["en|"+k]||"").toLowerCase().indexOf(q)>-1||(ST.ovr["pt|"+k]||"").toLowerCase().indexOf(q)>-1;};
-  var cur=all.filter(function(g){return g.id===ST.scr;})[0]||all[0];
-  var show=q?all.map(function(g){return {id:g.id,title:g.title,keys:g.keys.filter(match)};}).filter(function(g){return g.keys.length;}):(cur?[cur]:[]);
-  var count=show.reduce(function(n,g){return n+g.keys.length;},0);
-  var h='<h2>Survey</h2><p class="msg" style="margin-top:-4px">Every text of the questionnaire, in the same order as the screens respondents see. Only for small language fixes (typos, definitions, examples). It does not add or remove questions. Responses already saved are not affected: they always store the original name of each option. Changes show up in the survey within a few seconds.</p>'+
-   '<div class="filters"><input type="search" id="tq" placeholder="Search text..." value="'+esc(ST.tq)+'" style="max-width:380px"><span class="tag">'+count+' texts</span>'+(ST.unlocked?'<button class="btn sm" id="lockb">Lock</button>':'<button class="btn sm pri" id="editb">Edit</button><span class="tag">🔒 locked (read only)</span>')+'</div>'+
-   (ST.unlocked||!ST.askpw?'':'<div class="card" style="padding:14px;margin:10px 0"><label for="epw" style="font-weight:700;font-size:.85rem">Confirm your password to edit</label><div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap"><input type="password" id="epw" autocomplete="current-password" style="max-width:260px"><button class="btn sm pri" id="epwok">Unlock</button><button class="btn sm" id="epwno">Cancel</button></div><p class="msg bad" id="epwmsg"></p></div>');
-  if(!q)h+='<nav class="screens">'+all.map(function(g){return '<button data-s="'+esc(g.id)+'"'+(cur&&g.id===cur.id?' class="on"':'')+'>'+esc(g.title)+'</button>';}).join("")+'</nav>';
-  show.forEach(function(g){
-    var sg=(ST.groups||[]).filter(function(x){return x.id===g.id;})[0],si=sg&&sg.stage!=null?sg.stage:-1;
-    h+='<section class="scr"><div class="scrtop"><span>Holidays in Portugal</span><span>PT</span></div><div class="stages">'+["Profile","Holiday","Preferences","Foundation","Bundle"].map(function(n,i){return '<div class="stg'+(i<=si?' on':'')+'"><i></i><span>'+n+'</span></div>';}).join("")+'</div><h3>'+esc(g.title.replace(/^\d+\.\s*/,""))+'</h3>'+g.keys.map(textRow).join("")+'</section>';
-  });
-  if(!show.length)h+='<p class="empty">No texts found.</p>';
-  v.innerHTML=h;
-  var tq=qs("#tq");tq.oninput=function(){ST.tq=this.value;var pos=this.selectionStart;paint();var t2=qs("#tq");t2.focus();t2.setSelectionRange(pos,pos);};
-  Array.prototype.forEach.call(v.querySelectorAll("nav.screens button"),function(b){b.onclick=function(){ST.scr=b.getAttribute("data-s");paint();window.scrollTo(0,0);};});
-  var eb=qs("#editb");if(eb)eb.onclick=function(){ST.askpw=true;paint();var e=qs("#epw");if(e)e.focus();};
-  var lb=qs("#lockb");if(lb)lb.onclick=function(){ST.unlocked=false;ST.askpw=false;paint();};
-  var no=qs("#epwno");if(no)no.onclick=function(){ST.askpw=false;paint();};
-  var ok=qs("#epwok");if(ok){var go=function(){
-    var m=qs("#epwmsg");m.textContent="Checking...";
-    sb.auth.signInWithPassword({email:ST.user.email,password:qs("#epw").value}).then(function(r){
-      if(r.error){m.textContent="Wrong password.";return;}
-      ST.unlocked=true;ST.askpw=false;paint();});};
-    ok.onclick=go;qs("#epw").onkeydown=function(e){if(e.key==="Enter")go();};}
-  Array.prototype.forEach.call(v.querySelectorAll(".trow"),function(row){
-    if(!ST.unlocked)return;
-    var k=row.getAttribute("data-k"),st=qs(".st",row);
-    qs("[data-save]",row).onclick=function(){saveRow(row,k,st);};
-    qs("[data-reset]",row).onclick=function(){
-      qs('[data-l="en"]',row).value=k;qs('[data-l="pt"]',row).value=ST.texts[k];saveRow(row,k,st);};
-  });
-}
-function saveRow(row,k,st){
-  var ops=[],who=(ST.user&&ST.user.email)||"";
-  [["en",k],["pt",ST.texts[k]]].forEach(function(p){
-    var val=qs('[data-l="'+p[0]+'"]',row).value.trim(),def=p[1],id=p[0]+"|"+k;
-    if(!val||val===def){if(ST.ovr[id]!=null){ops.push(sb.from("text_overrides").delete().eq("lang",p[0]).eq("key",k).then(function(r){if(!r.error)delete ST.ovr[id];return r;}));}}
-    else if(ST.ovr[id]!==val){ops.push(sb.from("text_overrides").upsert({lang:p[0],key:k,value:val,updated_by:who,updated_at:new Date().toISOString()}).then(function(r){if(!r.error)ST.ovr[id]=val;return r;}));}
-  });
-  st.textContent="saving...";
-  Promise.all(ops).then(function(rs){
-    var bad=rs.filter(function(r){return r&&r.error;})[0];
-    st.textContent=bad?"error: "+bad.error.message:(ST.ovr["en|"+k]!=null||ST.ovr["pt|"+k]!=null?"saved":"original");
-    row.classList.toggle("edited",ST.ovr["en|"+k]!=null||ST.ovr["pt|"+k]!=null);
-  });
 }
 
 boot();
