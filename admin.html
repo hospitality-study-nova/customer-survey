@@ -154,7 +154,7 @@ sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_IN"&&!ST.user)boot();});
 
 function shell(){
   app.innerHTML='<header class="top"><div class="wrap"><div class="bar"><h1>Customer Survey<small>Private team area</small></h1>'+
-   '<button class="btn pri sm" id="clink">Copy questionnaire link</button><button class="btn sm" id="out">Sign out</button></div>'+
+   '<button class="btn pri sm" id="clink">Copy questionnaire link</button><a class="btn sm" id="tst" href="'+esc(formUrl()+'?test=1')+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Test survey (nothing is saved)</a><button class="btn sm" id="out">Sign out</button></div>'+
    '<nav class="tabs"><button data-t="overview">Overview</button><button data-t="responses">Responses</button><button data-t="texts">Survey</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
   qs("#clink").onclick=function(){copyText(formUrl(),this);};
   qs("#out").onclick=function(){sb.auth.signOut().then(function(){ST.user=null;ST.loaded=false;loginView();});};

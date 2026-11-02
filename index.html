@@ -60,7 +60,7 @@ h3{font:700 1.02rem/1.4 var(--f);margin:0 0 12px;letter-spacing:-.015em}
 .hint{color:var(--muted);font-size:.9rem;margin:-6px 0 12px}
 .defbox .dh{display:block;margin-top:4px;font-size:.85rem}
 .ihint{display:flex;align-items:center;gap:8px;margin:10px 0 0;color:var(--muted);font-size:.85rem;font-weight:600}
-.ii{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--muted);color:var(--ink);font:700 .68rem/1 Georgia,serif;font-style:italic;vertical-align:-3px;margin:0 1px}
+.ii{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--muted);color:var(--ink);font:700 .68rem/1 Georgia,serif;font-style:italic;vertical-align:-1px;margin:0 1px}
 .vgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0 4px}
 .vi{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;font-size:.72rem;line-height:1.2;color:var(--muted);font-weight:600}
 .vi i{width:100%;max-width:64px;aspect-ratio:1;border-radius:18px;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:17px;display:block}
@@ -312,6 +312,8 @@ pre{margin:10px 0 0;padding:12px;background:var(--panel);border-radius:10px;font
 "use strict";
 /* ---------- Configuration ---------- */
 var SC=window.SITE_CONFIG||{};
+var TEST=/[?&]test=1(&|$)/.test(location.search);
+if(TEST){var tb=document.createElement("div");tb.textContent="TEST MODE: your answers are NOT saved";tb.style.cssText="position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#b42318;color:#fff;text-align:center;font:700 .8rem/1 sans-serif;padding:8px;pointer-events:none";document.body.appendChild(tb);}
 var CONFIG={SUPABASE_URL:SC.SUPABASE_URL||"",SUPABASE_ANON_KEY:SC.SUPABASE_ANON_KEY||"",RPC:"upsert_response",SHARE_URL:SC.SITE_URL||""};
 var VERSION="proto-0.6-hub";
 var PLACES=[{k:"Albufeira",d:"Algarve"},{k:"Lagos",d:"Algarve"},{k:"Vilamoura",d:"Algarve"},{k:"Tróia",d:"Tróia peninsula"},{k:"Aroeira",d:"Almada, south of Lisbon"},{k:"Castro Marim",d:"Eastern Algarve"}];
@@ -987,7 +989,7 @@ function payload(extra){
 }
 /* Saves with a database function (upsert on session_id), so going back and changing an answer updates the same row. */
 function send(p,cb){
-  if(!CONFIG.SUPABASE_URL){cb("preview");return;}
+  if(TEST||!CONFIG.SUPABASE_URL){cb("preview");return;}
   fetch(CONFIG.SUPABASE_URL+"/rest/v1/rpc/"+CONFIG.RPC,{method:"POST",
     headers:{apikey:CONFIG.SUPABASE_ANON_KEY,Authorization:(/^eyJ/.test(CONFIG.SUPABASE_ANON_KEY)?"Bearer "+CONFIG.SUPABASE_ANON_KEY:undefined),"Content-Type":"application/json"},
     body:JSON.stringify({p_session:S.sid,p_destination:p.destination,p_entry:p.entry_point,p_payload:p})})
@@ -1009,7 +1011,7 @@ function shareIt(){
 function waShare(){window.open("https://wa.me/?text="+encodeURIComponent(shareTxt()+" "+shareUrl()),"_blank");}
 function submit(){
   S.sub="sending";var p=payload();
-  if(!CONFIG.SUPABASE_URL){S.sub="preview";S.preview=p;render();return;}
+  if(TEST||!CONFIG.SUPABASE_URL){S.sub="preview";S.preview=p;render();return;}
   render();
   send(p,function(res){S.sub=res;if(S.cur==="pass"&&!S.end)render();});
 }
