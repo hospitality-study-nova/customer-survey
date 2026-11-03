@@ -192,6 +192,23 @@ function tally(rows,get,order){
   else keys.sort(function(a,b){return m[b]-m[a];});
   return keys.map(function(k){return [k,m[k]];});
 }
+var WTPQ=[
+ {t:"Hotel, January (double room, 2 adults, breakfast), per night",f:"wtp_hotel_jan_double_two_breakfast",lab:["Up to €85","€86 to €110","€111 to €150","€151 to €210","More than €210"],pc:[25,55,76,89],n:124},
+ {t:"Hotel, August (double room, 2 adults, breakfast), per night",f:"wtp_hotel_aug_double_two_breakfast",lab:["Up to €190","€191 to €260","€261 to €380","€381 to €540","More than €540"],pc:[25,48,75,90],n:99},
+ {t:"Dinner per person, drinks included",f:"wtp_dinner_pp_drinks",lab:["Up to €16","€17 to €21","€22 to €27","€28 to €40","More than €40"],pc:[27,52,77,91],n:162}];
+var TIERS=["Mass market","Mid","High","Premium","Luxury"];
+function wtpTier(q,v){var i=q.lab.indexOf(v);return i<0?null:TIERS[i];}
+function wtpPct(q,v){var i=q.lab.indexOf(v);if(i<0)return null;var e=[0].concat(q.pc,[100]);return (e[i]+e[i+1])/2;}
+function wtpTable(rows){
+  var places=PLACES.concat([OTHER]);
+  var h='<div class="card" style="grid-column:1/-1"><h3>Willingness to pay vs. the Algarve market, by place</h3><p class="note">Each answer is turned into a market percentile: the middle of the band, as a share of Algarve prices at or below it (Booking, see Methodology). 50 means the market median; higher means a premium. Average per person.</p><div class="tablewrap"><table><thead><tr><th>Place</th><th>n</th>'+WTPQ.map(function(q){return '<th>'+esc(q.t.split(",")[0]+(q.t.indexOf("January")>-1?" Jan":q.t.indexOf("August")>-1?" Aug":""))+'</th>';}).join("")+'</tr></thead><tbody>';
+  function line(name,rs){
+    var c='';WTPQ.forEach(function(q){var v=[];rs.forEach(function(r){var x=wtpPct(q,P(r)[q.f]);if(x!=null)v.push(x);});c+='<td>'+(v.length?'P'+Math.round(v.reduce(function(a,b){return a+b;},0)/v.length)+' <small>(n='+v.length+')</small>':'-')+'</td>';});
+    return '<tr><td>'+esc(name)+'</td><td>'+rs.length+'</td>'+c+'</tr>';}
+  places.forEach(function(p){var name=p.k||p;var rs=rows.filter(function(r){return placeOf(r)===name;});if(rs.length)h+=line(name,rs);});
+  h+=line("All",rows);
+  return h+'</tbody></table></div></div>';
+}
 function money(s){var m=String(s).match(/\d+/);return m?+m[0]:(/not/i.test(s)?9999:0);}
 function ranks(title,rows,get,note){
   var sum={},n={},first={},cnt=0;
@@ -208,6 +225,7 @@ function ranks(title,rows,get,note){
 /* ---------- visao geral ---------- */
 var AGE=["18 to 24","25 to 34","35 to 44","45 to 54","55 to 64","65 or older"];
 var GENDER=["Male","Female","Non binary","Prefer not to say"];
+var SEASONS=["Winter (December to February)","Spring (March to May)","Summer (June to August)","Autumn (September to November)"];
 var FREQ=["1 time","2 times","3 to 4 times","5 times or more"];
 var NIGHTS=["1 night","2 to 3 nights","4 to 7 nights","8 to 14 nights","15 nights or more"];
 function overviewView(v){
@@ -234,6 +252,7 @@ function overviewView(v){
    '</div>';
   h+='<h2>Holidays</h2><div class="grid cards">'+
    bars("Frequency",tally(rows,function(r){return P(r).frequency;},FREQ),T)+
+   bars("Season of the last visit",tally(rows,function(r){return P(r).season_last_visit;},SEASONS),T)+
    bars("Nights on last visit",tally(rows,function(r){return P(r).nights_last_visit;},NIGHTS),T)+
    bars("Travelled with",tally(rows,function(r){return P(r).travelled_with_last_visit;}),T)+
    bars("Family group (besides the respondent)",tally(rows,function(r){return P(r).family_group;}),T,{note:"Only people who travelled with family; each can choose several."})+
@@ -253,8 +272,8 @@ function overviewView(v){
    bars("Geographic reach",tally(rows,function(r){return P(r).geo_reach;}),T)+
    '</div>';
   h+='<h2>Budget</h2><div class="grid cards">'+
-   bars("Hotel room (2 people, breakfast), per night",tally(rows,function(r){return P(r).wtp_hotel_room_two_breakfast;}).sort(function(a,b){return money(a[0])-money(b[0]);}),T)+
-   bars("Dinner per person, drinks included",tally(rows,function(r){return P(r).wtp_dinner_pp_drinks;}).sort(function(a,b){return money(a[0])-money(b[0]);}),T)+
+   WTPQ.map(function(q){return bars(q.t,tally(rows,function(r){return P(r)[q.f];},q.lab.concat(["Prefer not to say"])).map(function(c){var t=wtpTier(q,c[0]);return [t?c[0]+" · "+t:c[0],c[1]];}),T);}).join("")+
+   wtpTable(rows)+
    '</div>';
   v.innerHTML=h;
   qs("#flt").onchange=function(){ST.filter=this.value;paint();};
@@ -283,11 +302,11 @@ function detail(r){
   var h='<div class="modal" id="dm"><div class="sheet"><div style="display:flex;justify-content:space-between;gap:10px"><div><h3>'+esc(p.in_target_place?p.destination:(p.other_destination||"Other place"))+'</h3><span class="tag">'+esc(fmtDate(r.created_at))+'</span></div><button class="btn sm" id="dx">Close</button></div>'+
    (isScreened(r)?'<p class="msg bad">Excluded: '+esc(p.screened_out)+'</p>':'')+
    '<dl class="kv">'+kv("Gender",esc(p.gender))+kv("Age",esc(p.age))+kv("Residence",esc(p.residence))+kv("Loyalty programmes",esc((p.loyalty_memberships||[]).join(", ")))+
-   kv("Frequency",esc(p.frequency))+kv("Last visit",esc(p.nights_last_visit))+kv("Travelled with",esc(p.travelled_with_last_visit)+(p.family_group&&p.family_group.length?" ("+esc(p.family_group.join(", "))+")":""))+kv("Main reason",esc(p.entry_point)+(p.entry_point_other?": "+esc(p.entry_point_other):""))+
+   kv("Frequency",esc(p.frequency))+kv("Last visit",esc((p.season_last_visit?p.season_last_visit+", ":"")+(p.nights_last_visit||"")))+kv("Travelled with",esc(p.travelled_with_last_visit)+(p.family_group&&p.family_group.length?" ("+esc(p.family_group.join(", "))+")":""))+kv("Main reason",esc(p.entry_point)+(p.entry_point_other?": "+esc(p.entry_point_other):""))+
    kv("What mattered",ol(p.vertical_rank))+kv("Mechanisms",ol(p.mechanism_rank))+kv("Benefits",ol(p.benefit_rank))+
    kv("Bundle: join",esc(b.enter))+kv("Bundle: earn",esc(b.earn))+kv("Bundle: level up",esc(b.level_up))+kv("Bundle: benefits",ol(b.benefits))+
    kv("Free or paid",esc(p.program_type))+kv("Annual fee",esc(p.fee_band))+kv("Activities",esc(p.cross_use))+kv("Reach",esc(p.geo_reach))+
-   kv("Room per night",esc(p.wtp_hotel_room_two_breakfast))+kv("Dinner per person",esc(p.wtp_dinner_pp_drinks))+kv("In their own words",esc(p.open_anything_missing))+
+   kv("Room per night, Jan",esc(p.wtp_hotel_jan_double_two_breakfast))+kv("Room per night, Aug",esc(p.wtp_hotel_aug_double_two_breakfast))+kv("Dinner per person",esc(p.wtp_dinner_pp_drinks))+kv("In their own words",esc(p.open_anything_missing))+
    kv("Language",esc(p.language))+kv("Duration (s)",esc(p.duration_s))+kv("Version",esc(p.version))+'</dl>'+
    '<div style="display:flex;justify-content:flex-end"><button class="btn sm" id="ddel" style="color:var(--bad)">Delete this response</button></div></div></div>';
   qs("#mod").innerHTML=h;
@@ -301,7 +320,7 @@ function detail(r){
   };
 }
 function exportCsv(rows){
-  var cols=["created_at","session_id","language","gender","age","residence","destination","other_destination","in_target_place","screened_out","frequency","nights_last_visit","travelled_with_last_visit","family_group","entry_point","entry_point_other","vertical_rank","mechanism_rank","benefit_rank","program_type","fee_band","cross_use","geo_reach","built_enter","built_earn","built_level_up","built_benefits","loyalty_memberships","wtp_hotel_room_two_breakfast","wtp_dinner_pp_drinks","open_anything_missing","duration_s","presented_order"];
+  var cols=["created_at","session_id","language","gender","age","residence","destination","other_destination","in_target_place","screened_out","frequency","season_last_visit","nights_last_visit","travelled_with_last_visit","family_group","entry_point","entry_point_other","vertical_rank","mechanism_rank","benefit_rank","program_type","fee_band","cross_use","geo_reach","built_enter","built_earn","built_level_up","built_benefits","loyalty_memberships","wtp_hotel_jan_double_two_breakfast","wtp_hotel_aug_double_two_breakfast","wtp_dinner_pp_drinks","open_anything_missing","duration_s","presented_order"];
   function cell(x){if(x==null)return "";if(Array.isArray(x))x=x.join(" > ");x=String(x).replace(/"/g,'""');return /[;"\n\r]/.test(x)?'"'+x+'"':x;}
   var lines=[cols.join(";")];
   rows.forEach(function(r){var p=P(r),b=p.program_built||{};
@@ -324,7 +343,7 @@ var METHOD=[
   "1. Language (English or Portuguese, starting from the browser language) and a cover with an explicit consent box.",
   "2. Profile: gender, age, which of four residence and nationality situations applies, and loyalty programmes already held, with a short definition of what a loyalty programme is. Milestone: “Profile created”.",
   "3. Place: the one place they went to most often in the last 3 years, in the past tense (the 6 places or “None of these”). Those who went elsewhere name the place; those who did not go on holiday leave.",
-  "4. Last visit to that place: how often they go, nights, who they travelled with, and the main reason for the visit.",
+  "4. Last visit to that place: how often they go, season, nights, who they travelled with, and the main reason for the visit.",
   "5. A short animated example of how the ranking works (three neutral items, A, B and C, shown with the same cards as the real ranking). It plays once, Continue unlocks after it, and people can watch it again. Then the ranking of the holiday verticals (8, plus “Something else”): what mattered most on that visit. Milestone: “Holiday profile ready”.",
   "6. Design your loyalty programme, introduced as a way to make their holidays in Portugal the best they can be: five tasks in a fixed order, each unlocking the next. (a) Rank the 9 mechanisms. (b) Rank the 11 benefits. (c) The foundation: free, paid or free with an upgrade, the annual fee band if paid, how many activities (one only, mostly one, several) and geographic reach (local, regional, all of Portugal). The examples under each option use the person’s own top-ranked activity and chosen place. (d) Budget: hotel room and dinner per person, in bands. (e) Build the bundle: how to enter, how to earn, how to level up, and up to 3 benefits.",
   "7. One open question, then a thank-you page with a personal summary and a share link.",
@@ -349,7 +368,7 @@ var METHOD=[
   "The order of options changes for each person, to avoid position effects: the first and last options tend to be chosen more often. The order is drawn once per person and stays the same if they go back.",
   "Randomised: places, main reason for the last visit, verticals, the 9 mechanisms, the 11 benefits, the options inside the programme builder, and loyalty programmes held. Questions with a natural order keep it fixed: gender, age, frequency, nights, who they travelled with (alone, couple, friends, club, family) and programme type (free, paid, upgrade).",
   "Always last, never randomised: “None of these” (places and loyalty programmes), “Something else” (main reason), “No preference” and “One level is fine” (builder), and “Prefer not to say” (budget bands).",
-  "Not randomised: gender, age, residence and the ordered scales (frequency, nights, annual fee bands, hotel and dinner bands), activities and geographic reach, which also run from narrow to wide.",
+  "Not randomised: gender, age, residence and the ordered scales (frequency, season of the last visit, nights, annual fee bands, hotel and dinner bands), activities and geographic reach, which also run from narrow to wide.",
   "The order of the blocks is fixed, from the most general to the most specific, and the five tasks of the programme hub always run in the same order.",
   "Recording: every response stores the order in which each list was shown to that person (field presented_order, also a column in the CSV export). This allows testing position effects, for example average rank by position shown. Responses collected before this was added do not have it.",
   "Not done: randomising the order of the two ranking blocks (mechanisms always come before benefits). It could be added, but the later tasks depend on the earlier ones, so it needs a deliberate decision."]],
@@ -361,7 +380,11 @@ var METHOD=[
  ["Prices",[
   "Money questions come after both rankings, so they cannot anchor the rankings. Seeing high values first tends to make people value premium benefits more.",
   "Where they actually sit: free or paid and the annual fee are in “The foundation”, and the hotel room and dinner bands are in “Your budget”. Both come before the bundle builder, not at the very end of the questionnaire. Whether the budget should move after the build is still open.",
-  "Hotel room and dinner bands include “Prefer not to say”. The current bands are estimates to tell positionings apart and must be validated with real prices.",
+  "Hotel questions (asked in random order, order recorded): how much the person would be willing to pay on average per night for a double room for 2 adults, breakfast included, in January (low season) and in August (peak). The wording asks for an average, not a maximum, which would pull answers upwards. Dinner: willingness to pay per person, drinks included, with the note to think of a normal dinner, not a special occasion. All three include “Prefer not to say”.",
+  "Bands are the same for every respondent, whatever place they chose, so they are not shaped by where the person went. Each season has its own bands, because January and August prices are very different. There are five bands per question, named for analysis only (the names are not shown to respondents): Mass market, Mid, High, Premium and Luxury.",
+  "Bands come from Algarve market prices collected from Booking.com for 2 adults, double room, breakfast included, one night, on 30-31 January and 14-15 August (hotels), plus a restaurant dinner price list. Cut points are rounded Algarve percentiles: about the 25th (Mass market ends), 50th (Mid ends), 75th (High ends) and 90th (Premium ends); Luxury is the top 10%. January (n=124 prices): €85, €110, €150, €210. August (n=99): €190, €260, €380, €540. Dinner per person (n=162): €16, €21, €27, €40. The top row of the spreadsheet (€1,020 in three dates, €1,183 in August) is one extreme hotel and was left out, as were the spreadsheet’s summary rows. Including it moves each cut point by at most one percentile point.",
+  "How answers are read: each band becomes a market percentile (the middle of the band), for example “€111 to €150” in January is about the 66th percentile. The Budget view averages this per place. A higher number than other places means respondents there accept paying more relative to the whole Algarve market, which is the premium. The market values are not shown to respondents, to avoid anchoring.",
+  "Limits: prices are one night on two dates, from one platform, and are asking prices rather than what people paid. Booking prices to confirm with the data team: breakfast inclusion and the meaning of the N values in the spreadsheet.",
   "Proposed change, not applied: ask what the person paid on the last visit instead of the maximum they would pay, with a “did not stay in a hotel” option."]],
  ["Definitions of mechanisms and benefits",[
   "9 mechanisms and 11 benefits, with simple names and a short definition. The “i” on each option opens “What it means” and examples, and the definition card on the ranking pages says “(Click the i for more information)”.",
