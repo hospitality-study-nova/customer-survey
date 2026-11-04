@@ -94,7 +94,7 @@ var ST={tab:"overview",rows:[],filter:"all",user:null,detail:null,loaded:false,e
 
 /* ---------- questionnaire link ---------- */
 function formUrl(){return C.SITE_URL||new URL("./",location.href).href;}
-function shareMsg(){return "A Nova SBE student study on holidays in Portugal. It takes about 5 minutes and is anonymous: "+formUrl();}
+function shareMsg(){return "A Nova SBE student study on holidays in Portugal. It takes about 8 minutes and is anonymous: "+formUrl();}
 function copyText(t,btn){
   function ok(){if(btn){var o=btn.textContent;btn.textContent="Copied";setTimeout(function(){btn.textContent=o;},1600);}}
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,function(){});return;}
@@ -347,7 +347,7 @@ var METHOD=[
   "5. A short animated example of how the ranking works (three neutral items, A, B and C, shown with the same cards as the real ranking). It plays once, Continue unlocks after it, and people can watch it again. Then the ranking of the holiday verticals (8, plus “Something else”): what mattered most on that visit. Milestone: “Holiday profile ready”.",
   "6. Design your loyalty programme, introduced as a way to make their holidays in Portugal the best they can be: five tasks in a fixed order, each unlocking the next. (a) Rank the 9 mechanisms. (b) Rank the 11 benefits. (c) The foundation: free, paid or free with an upgrade, the annual fee band if paid, how many activities (one only, mostly one, several) and geographic reach (local, regional, all of Portugal). The examples under each option use the person’s own top-ranked activity and chosen place. (d) Budget: hotel room and dinner per person, in bands. (e) Build the bundle: how to enter, how to earn, how to level up, and up to 3 benefits.",
   "7. One open question, then a thank-you page with a personal summary and a share link.",
-  "Target duration: about 5 minutes, to be confirmed in the pilot. Web format designed for mobile, in English and Portuguese.",
+  "Target duration: about 8 minutes, to be confirmed in the pilot. Web format designed for mobile, in English and Portuguese.",
   "Version in use: proto-0.6-hub. Checked against the live survey on 2 November 2026."]],
  ["Neutrality",[
   "Principle: the form of the questionnaire must not favour any answer.",
