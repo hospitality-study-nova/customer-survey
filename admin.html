@@ -211,14 +211,14 @@ function wtpTable(rows){
 }
 function money(s){var m=String(s).match(/\d+/);return m?+m[0]:(/not/i.test(s)?9999:0);}
 function ranks(title,rows,get,note){
-  var sum={},n={},first={},cnt=0;
-  rows.forEach(function(r){var a=get(r);if(!a||!a.length)return;cnt++;a.forEach(function(x,i){sum[x]=(sum[x]||0)+i+1;n[x]=(n[x]||0)+1;if(i===0)first[x]=(first[x]||0)+1;});});
-  var keys=Object.keys(sum).sort(function(a,b){return sum[a]/n[a]-sum[b]/n[b];});
-  var h='<div class="card"><h3>'+esc(title)+'</h3><p class="note">'+esc(note||"Average position (1 is best) and % who ranked it first.")+'</p>';
+  /* Points are the reverse of the position the respondent saw: first place gets as many points as there are items, last place gets 1. */
+  var sum={},n={},first={},cnt=0,top=0;
+  rows.forEach(function(r){var a=get(r);if(!a||!a.length)return;cnt++;if(a.length>top)top=a.length;a.forEach(function(x,i){sum[x]=(sum[x]||0)+(a.length-i);n[x]=(n[x]||0)+1;if(i===0)first[x]=(first[x]||0)+1;});});
+  var keys=Object.keys(sum).sort(function(a,b){return sum[b]/n[b]-sum[a]/n[a];});
+  var h='<div class="card"><h3>'+esc(title)+'</h3><p class="note">'+esc(note||"Average points: 1st place = "+(top||"N")+" points, last place = 1. Higher is better. Also the % who ranked it first.")+'</p>';
   if(!cnt)return h+'<p class="empty">No data.</p></div>';
-  var L=keys.length;
-  keys.forEach(function(k){var avg=sum[k]/n[k];var w=L>1?Math.round((L-avg)/(L-1)*100):100;
-    h+='<div class="row"><span class="l" title="'+esc(k)+'">'+esc(k)+'</span><span class="t"><i style="width:'+Math.max(w,3)+'%"></i></span><span class="v">'+avg.toFixed(1)+' · '+pct(first[k]||0,cnt)+'% ranked 1st</span></div>';});
+  keys.forEach(function(k){var avg=sum[k]/n[k];var w=Math.round(avg/top*100);
+    h+='<div class="row"><span class="l" title="'+esc(k)+'">'+esc(k)+'</span><span class="t"><i style="width:'+Math.max(w,3)+'%"></i></span><span class="v">'+avg.toFixed(1)+' pts · '+pct(first[k]||0,cnt)+'% ranked 1st</span></div>';});
   return h+'</div>';
 }
 
@@ -356,6 +356,7 @@ var METHOD=[
   "All options have the same visual weight: same size, icons of the same style, no photographs and no brand or destination logos, to avoid creating associations. The only logo is the Nova SBE one on the cover.",
   "A single accent colour, a bluish slate grey. Green and red were avoided because they suggest right and wrong, and warm colours because they stimulate. The idea that cool, sober tones are more neutral comes from survey design practice and must be backed by literature before we cite it.",
   "The reach question does not name the place, and its options are generic (local, regional, all of Portugal), so people are not anchored on one destination. The place only appears in the explanation below each option.",
+  "Scoring: respondents only see positions 1, 2, 3… In the analysis each position is converted to points in reverse. First place gets as many points as there are items (8 for the activities, 9 for the mechanisms, 11 for the benefits) and last place gets 1. The overview shows the average points per item (higher is better) and the share who ranked it first. If someone adds their own reason to the activities (9 items), their points use their own list, so first place gets 9. Respondents never see points.",
   "All three rankings ask for relevance (“from the most relevant to the least relevant”), not what the person wants. “Relevant” is used instead of “important” because it is more neutral: “important” suggests a positive judgement, while relevance only asks how much something matters to the person.",
   "Neutral language, no marketing adjectives. The cover says the programme is an illustration, not a real offer.",
   "The cover presents a Nova SBE student project and does not name the client, so as not to influence answers.",
@@ -397,7 +398,7 @@ var METHOD=[
  ["Academic feasibility and limits",[
   "Type of study: descriptive and comparative survey across places and tiers.",
   "Convenience and snowball sample, not representative of the population. The results are rankings and comparisons, not population estimates.",
-  "Planned analysis: average rank and percentage in the top 3 of each item, by place and by tier, and comparison between tiers with non-parametric tests (to be defined).",
+  "Planned analysis: average points (reverse of rank position) and percentage in the top 3 of each item, by place and by tier, and comparison between tiers with non-parametric tests (to be defined).",
   "Ethics: anonymous, no name or email, adults only, explicit consent, and data used in aggregate. To confirm with the coordination: GDPR compliance and use of the Nova SBE logo.",
   "Suggested base references, to verify before citing: Dillman, Smyth and Christian (2014) on online surveys; Krosnick (1991) on satisficing; Tourangeau, Couper and Conrad (2004) on visual and position effects; Deterding et al. (2011) on gamification.",
   "Limits: self-selection of people who answer online, an interactive format that may influence answers, 20 items to rank, our own translations, and missing tiers for Aroeira and Castro Marim."]],
