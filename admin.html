@@ -70,6 +70,14 @@ tr.click{cursor:pointer}tr.click:hover{background:var(--panel)}
 .doc .card{margin:14px 0}
 .doc ul{margin:8px 0 0;padding-left:20px}
 .doc li{margin:7px 0;line-height:1.55}
+.card.drill{cursor:pointer;transition:border-color .15s}
+.card.drill:hover,.card.drill:focus-visible{border-color:var(--muted);outline:none}
+.dh{font-weight:600;color:var(--muted);font-size:.72rem;margin-left:8px}
+.sheet td small,.sheet th small{color:var(--muted);font-weight:500}
+.sheet td{border-bottom:1px solid var(--line)}
+details>summary{list-style:none}details>summary::-webkit-details-marker{display:none}
+details>summary::before{content:"\25B8";display:inline-block;margin-right:6px;color:var(--muted)}
+details[open]>summary::before{content:"\25BE"}
 </style>
 </head>
 <body>
@@ -178,8 +186,9 @@ function filtered(){
 /* ---------- graficos simples ---------- */
 function pct(n,t){return t?Math.round(n/t*100):0;}
 function bars(title,counts,total,opts){
-  opts=opts||{};
-  var h='<div class="card"><h3>'+esc(title)+'</h3>'+(opts.note?'<p class="note">'+esc(opts.note)+'</p>':'');
+  opts=opts||{};var di=-1;
+  if(opts.drill){di=DR.length;DR.push({kind:"cat",title:title,get:opts.drill.get,order:opts.drill.order,label:opts.drill.label,extra:opts.drill.extra});}
+  var h='<div class="card'+(di>-1?' drill':'')+'"'+(di>-1?' data-dr="'+di+'" tabindex="0" role="button"':'')+'><h3>'+esc(title)+(di>-1?'<span class="dh">by destination &rsaquo;</span>':'')+'</h3>'+(opts.note?'<p class="note">'+esc(opts.note)+'</p>':'');
   if(!counts.length||!total){return h+'<p class="empty">No data.</p></div>';}
   var max=Math.max.apply(null,counts.map(function(c){return c[1];}))||1;
   counts.forEach(function(c){h+='<div class="row"><span class="l" title="'+esc(c[0])+'">'+esc(c[0])+'</span><span class="t"><i style="width:'+Math.round(c[1]/max*100)+'%"></i></span><span class="v">'+c[1]+' ('+pct(c[1],total)+'%)</span></div>';});
@@ -199,23 +208,117 @@ var WTPQ=[
 var TIERS=["Mass market","Mid","High","Premium","Luxury"];
 function wtpTier(q,v){var i=q.lab.indexOf(v);return i<0?null:TIERS[i];}
 function wtpPct(q,v){var i=q.lab.indexOf(v);if(i<0)return null;var e=[0].concat(q.pc,[100]);return (e[i]+e[i+1])/2;}
+/* ---------- clique num cartao: ver por destino ---------- */
+var DR=[];
+function destCols(){return PLACES.concat([OTHER]);}
+function valsOf(get,r){var v=get(r);if(v==null||v==="")return [];return Array.isArray(v)?v:[v];}
+function heat(p){return 'background:rgba(59,75,86,'+(0.04+Math.min(1,Math.max(0,p))*0.5).toFixed(2)+')';}
+function colHead(c,n){return '<th>'+esc(c===OTHER?"Other places":c)+'<br><small>n='+n+'</small></th>';}
+function crossTable(d){
+  var rows=complete(),cols=destCols(),g={};
+  cols.forEach(function(c){g[c]=rows.filter(function(r){return placeOf(r)===c;});});
+  function ans(rs){return rs.filter(function(r){return valsOf(d.get,r).length;});}
+  var cats=tally(rows,d.get,d.order).map(function(c){return c[0];});
+  if(d.extra)d.extra.forEach(function(x){if(cats.indexOf(x)<0)cats.push(x);});
+  var h='<table><thead><tr><th>Answer</th>'+cols.map(function(c){return colHead(c,ans(g[c]).length);}).join("")+colHead("All",ans(rows).length)+'</tr></thead><tbody>';
+  cats.forEach(function(k){
+    function cell(rs){var a=ans(rs);var m=a.filter(function(r){return valsOf(d.get,r).indexOf(k)>-1;}).length;var p=a.length?m/a.length:0;
+      return '<td style="'+heat(p)+'">'+(a.length?Math.round(p*100)+'% <small>('+m+')</small>':'-')+'</td>';}
+    h+='<tr><td>'+esc(d.label?d.label(k):k)+'</td>'+cols.map(function(c){return cell(g[c]);}).join("")+cell(rows)+'</tr>';});
+  return h+'</tbody></table>';
+}
+function rankMatrix(d){
+  var rows=complete(),cols=destCols(),g={};
+  cols.forEach(function(c){g[c]=rows.filter(function(r){return placeOf(r)===c;});});
+  function calc(rs){var s={},n={},cnt=0,top=0;rs.forEach(function(r){var a=cleanRank(d.get(r));if(!a.length)return;cnt++;if(a.length>top)top=a.length;a.forEach(function(x,i){s[x]=(s[x]||0)+(a.length-i);n[x]=(n[x]||0)+1;});});return {s:s,n:n,cnt:cnt,top:top};}
+  var all=calc(rows),per=cols.map(function(c){return calc(g[c]);});
+  var keys=Object.keys(all.s).sort(function(a,b){return all.s[b]/all.n[b]-all.s[a]/all.n[a];});
+  var h='<table><thead><tr><th>Item</th>'+cols.map(function(c,i){return colHead(c,per[i].cnt);}).join("")+colHead("All",all.cnt)+'</tr></thead><tbody>';
+  keys.forEach(function(k){
+    function cell(x){return x.n[k]?'<td style="'+heat(x.s[k]/x.n[k]/x.top)+'">'+(x.s[k]/x.n[k]).toFixed(1)+'</td>':'<td>-</td>';}
+    h+='<tr><td>'+esc(k)+'</td>'+per.map(cell).join("")+cell(all)+'</tr>';});
+  return h+'</tbody></table>';
+}
+function openDrill(i){
+  var d=DR[i];if(!d)return;
+  var note=d.kind==="rank"?"Average points by destination: 1st place gets as many points as there are items, last place gets 1. Darker means higher.":"Share of the people at each destination who gave that answer (n is the number of people who answered). Darker means a larger share.";
+  qs("#mod").innerHTML='<div class="modal" id="dm"><div class="sheet" style="max-width:1100px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h3>'+esc(d.title)+' by destination</h3><p class="note" style="margin:4px 0 0;color:var(--muted);font-size:.82rem">'+esc(note)+'</p></div><button class="btn sm" id="dx">Close</button></div><div class="tablewrap" style="margin-top:12px">'+(d.kind==="rank"?rankMatrix(d):crossTable(d))+'</div></div></div>';
+  qs("#dx").onclick=function(){qs("#mod").innerHTML="";};
+  qs("#dm").onclick=function(e){if(e.target.id==="dm")qs("#mod").innerHTML="";};
+}
+function bindDrills(root){
+  Array.prototype.forEach.call(root.querySelectorAll("[data-dr]"),function(el){
+    el.onclick=function(){openDrill(+el.getAttribute("data-dr"));};
+    el.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openDrill(+el.getAttribute("data-dr"));}};});
+}
+
+/* ---------- outros locais: texto livre agrupado por regras ---------- */
+function norm(s){return String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim();}
+var OGRP=[
+ ["Algarve (other areas)",/algarve|alvor|quarteira|rocha|portimao|carvoeiro|faro\b|olhao|lagoa|armacao|sagres|vila real|manta rota|cabanas|tavira|monte ?gordo|burgau|salema|ferragudo|vau\b/],
+ ["Alentejo coast and Costa Vicentina",/alentej|melides|comporta|porto covo|vicentin|vincentin|odemira|sines|zambujeira|milfontes|grandola/],
+ ["Lisbon area and Centre",/lisboa|cascais|ericeira|peniche|nazare|sesimbra|setubal|caparica|praia de mira|figueira|aveiro|coimbra|luso|obidos|sintra|baleal|arrabida/],
+ ["North of Portugal",/porto(?! covo)|minho|geres|douro|viana|braga|ponte de lima|esposende|povoa|gaia/],
+ ["Islands",/madeira|acores|azores|porto santo|funchal|sao miguel|terceira/],
+ ["Abroad",/espanha|spain|franca|france|italia|italy|sicilia|brasil|brazil|estrangeiro|abroad|paris|world|mundo|grecia|greece|croacia|marrocos|inglaterra|londres|london|alemanha|eua|usa|mexico|canarias|cabo verde/]];
+function otherGroup(t){var n=norm(t),hit=[];OGRP.forEach(function(g){if(g[1].test(n))hit.push(g[0]);});return hit.length===1?hit[0]:(hit.length>1?"Several places in one answer":"No clear place");}
+function otherPlacesCard(all){
+  var oth=all.filter(function(r){return placeOf(r)===OTHER&&P(r).other_destination;});
+  var h='<div class="card"><h3>Other places: what people wrote</h3><p class="note">Answers from people who chose “None of these”, grouped by keyword rules (no AI is used in this panel). Same spelling counts as one. Tap a group to open it.</p>';
+  if(!oth.length)return h+'<p class="empty">No data.</p></div>';
+  var groups={};
+  oth.forEach(function(r){var t=String(P(r).other_destination).trim();var g=otherGroup(t),k=norm(t);
+    groups[g]=groups[g]||{};var e=groups[g][k]=groups[g][k]||{n:0,forms:{}};e.n++;e.forms[t]=(e.forms[t]||0)+1;});
+  var order=OGRP.map(function(g){return g[0];}).concat(["Several places in one answer","No clear place"]);
+  order.forEach(function(g){var m=groups[g];if(!m)return;
+    var items=Object.keys(m).map(function(k){var e=m[k];var best=Object.keys(e.forms).sort(function(a,b){return e.forms[b]-e.forms[a];})[0];return {t:best,n:e.n};}).sort(function(a,b){return b.n-a.n||(a.t<b.t?-1:1);});
+    var tot=items.reduce(function(a,b){return a+b.n;},0);
+    h+='<details style="margin:6px 0"><summary style="cursor:pointer;font-weight:700;font-size:.88rem">'+esc(g)+' <span class="tag">'+tot+'</span></summary><ul style="margin:6px 0 4px;padding-left:20px;font-size:.86rem">'+items.map(function(i){return '<li>'+esc(i.t)+(i.n>1?' <span class="tag">×'+i.n+'</span>':'')+'</li>';}).join("")+'</ul></details>';});
+  return h+'</div>';
+}
+function cleanRank(a){return (a||[]).filter(function(x){return String(x).indexOf("other: ")!==0;});}
+function otherReasonsCard(rows){
+  var items=[];
+  rows.forEach(function(r){var vr=(P(r).vertical_rank||[]).map(String);vr.forEach(function(x,i){if(x.indexOf("other: ")===0)items.push({t:x.slice(7),pos:i+1,n:vr.length,d:placeOf(r)});});});
+  var h='<div class="card"><h3>What mattered most: own reasons (“Something else”)</h3><p class="note">Typed by the person, so they are not counted in the points or percentages above. Shown with the place and the position they gave it.</p>';
+  if(!items.length)return h+'<p class="empty">None so far.</p></div>';
+  return h+'<ul style="margin:0;padding-left:20px;font-size:.86rem">'+items.map(function(i){return '<li>'+esc(i.t)+' <span class="tag">'+esc(i.d===OTHER?"Other places":i.d)+'</span> <span class="tag">ranked '+i.pos+' of '+i.n+'</span></li>';}).join("")+'</ul></div>';
+}
+function bundleCards(rows,T){
+  var combos={},pairs={};
+  rows.forEach(function(r){var b=P(r).program_built||{};
+    var comp=[b.enter,b.earn,b.level_up].concat(b.benefits||[]).filter(Boolean);
+    if(comp.length<2)return;
+    var k=comp.join(" + ");combos[k]=(combos[k]||0)+1;
+    for(var i=0;i<comp.length;i++)for(var j=i+1;j<comp.length;j++){var pk=comp[i]+" + "+comp[j];pairs[pk]=(pairs[pk]||0)+1;}});
+  function top(m,n){return Object.keys(m).map(function(k){return [k,m[k]];}).sort(function(a,b){return b[1]-a[1];}).slice(0,n);}
+  return bars("Most common bundles (join + earn + level up + benefit)",top(combos,10),T,{note:"With few responses most bundles are unique. Use the pairs below to see what goes together."})+
+   bars("Choices that go together (pairs)",top(pairs,12),T,{note:"How many people put both choices in the same bundle."});
+}
+
 function wtpTable(rows){
   var places=PLACES.concat([OTHER]);
-  var h='<div class="card" style="grid-column:1/-1"><h3>Willingness to pay vs. the Algarve market, by place</h3><p class="note">Each answer is turned into a market percentile: the middle of the band, as a share of Algarve prices at or below it (Booking, see Methodology). 50 means the market median; higher means a premium. Average per person.</p><div class="tablewrap"><table><thead><tr><th>Place</th><th>n</th>'+WTPQ.map(function(q){return '<th>'+esc(q.t.split(",")[0]+(q.t.indexOf("January")>-1?" Jan":q.t.indexOf("August")>-1?" Aug":""))+'</th>';}).join("")+'</tr></thead><tbody>';
+  var h='<div class="card" style="grid-column:1/-1"><h3>Willingness to pay vs. the Algarve market, by destination</h3><p class="note">How to read it: each answer is a price band. We convert it to where that price sits among Algarve prices (Booking, see Methodology). P50 is the market median price and P75 means higher than 75% of the prices in the market. The number is the average for the people at that destination, and the typical band is their middle answer. A destination with a higher number than the others has visitors who accept a higher price position in the market, that is, a premium.</p><div class="tablewrap"><table><thead><tr><th>Destination</th><th>n</th>'+WTPQ.map(function(q){return '<th>'+esc(q.t.split(",")[0]+(q.t.indexOf("January")>-1?" Jan":q.t.indexOf("August")>-1?" Aug":""))+'</th>';}).join("")+'</tr></thead><tbody>';
   function line(name,rs){
-    var c='';WTPQ.forEach(function(q){var v=[];rs.forEach(function(r){var x=wtpPct(q,P(r)[q.f]);if(x!=null)v.push(x);});c+='<td>'+(v.length?'P'+Math.round(v.reduce(function(a,b){return a+b;},0)/v.length)+' <small>(n='+v.length+')</small>':'-')+'</td>';});
-    return '<tr><td>'+esc(name)+'</td><td>'+rs.length+'</td>'+c+'</tr>';}
+    var c='';WTPQ.forEach(function(q){var v=[],ix=[];rs.forEach(function(r){var x=wtpPct(q,P(r)[q.f]);if(x!=null){v.push(x);ix.push(q.lab.indexOf(P(r)[q.f]));}});
+      ix.sort(function(a,b){return a-b;});
+      c+='<td>'+(v.length?'<b>P'+Math.round(v.reduce(function(a,b){return a+b;},0)/v.length)+'</b> <small>(n='+v.length+')</small><br><small>typical: '+esc(q.lab[ix[Math.floor((ix.length-1)/2)]])+'</small>':'-')+'</td>';});
+    return '<tr><td>'+esc(name==OTHER?"Other places":name)+'</td><td>'+rs.length+'</td>'+c+'</tr>';}
   places.forEach(function(p){var name=p.k||p;var rs=rows.filter(function(r){return placeOf(r)===name;});if(rs.length)h+=line(name,rs);});
   h+=line("All",rows);
   return h+'</tbody></table></div></div>';
 }
 function money(s){var m=String(s).match(/\d+/);return m?+m[0]:(/not/i.test(s)?9999:0);}
 function ranks(title,rows,get,note){
-  /* Points are the reverse of the position the respondent saw: first place gets as many points as there are items, last place gets 1. */
+  /* Points are the reverse of the position the respondent saw: first place gets as many points as there are items, last place gets 1.
+     Own reasons typed in “Something else” are left out and the remaining items keep their relative order. */
+  var di=DR.length;DR.push({kind:"rank",title:title,get:get});
   var sum={},n={},first={},cnt=0,top=0;
-  rows.forEach(function(r){var a=get(r);if(!a||!a.length)return;cnt++;if(a.length>top)top=a.length;a.forEach(function(x,i){sum[x]=(sum[x]||0)+(a.length-i);n[x]=(n[x]||0)+1;if(i===0)first[x]=(first[x]||0)+1;});});
+  rows.forEach(function(r){var raw=get(r)||[];var a=cleanRank(raw);if(!a.length)return;cnt++;if(a.length>top)top=a.length;
+    a.forEach(function(x,i){sum[x]=(sum[x]||0)+(a.length-i);n[x]=(n[x]||0)+1;});
+    if(String(raw[0]).indexOf("other: ")!==0)first[raw[0]]=(first[raw[0]]||0)+1;});
   var keys=Object.keys(sum).sort(function(a,b){return sum[b]/n[b]-sum[a]/n[a];});
-  var h='<div class="card"><h3>'+esc(title)+'</h3><p class="note">'+esc(note||"Average points: 1st place = "+(top||"N")+" points, last place = 1. Higher is better. Also the % who ranked it first.")+'</p>';
+  var h='<div class="card drill" data-dr="'+di+'" tabindex="0" role="button"><h3>'+esc(title)+'<span class="dh">by destination &rsaquo;</span></h3><p class="note">'+esc(note||"Average points: 1st place = "+(top||"N")+" points, last place = 1. Higher is better. Also the % who ranked it first.")+'</p>';
   if(!cnt)return h+'<p class="empty">No data.</p></div>';
   keys.forEach(function(k){var avg=sum[k]/n[k];var w=Math.round(avg/top*100);
     h+='<div class="row"><span class="l" title="'+esc(k)+'">'+esc(k)+'</span><span class="t"><i style="width:'+Math.max(w,3)+'%"></i></span><span class="v">'+avg.toFixed(1)+' pts · '+pct(first[k]||0,cnt)+'% ranked 1st</span></div>';});
@@ -229,6 +332,7 @@ var SEASONS=["Winter (December to February)","Spring (March to May)","Summer (Ju
 var FREQ=["1 time","2 times","3 to 4 times","5 times or more"];
 var NIGHTS=["1 night","2 to 3 nights","4 to 7 nights","8 to 14 nights","15 nights or more"];
 function overviewView(v){
+  DR=[];
   var all=complete(),rows=filtered(),T=rows.length;
   var screened=ST.rows.length-all.length;
   var inT=all.filter(function(r){return P(r).in_target_place;}).length;
@@ -240,42 +344,54 @@ function overviewView(v){
   PLACES.forEach(function(p){var n=all.filter(function(r){return placeOf(r)===p;}).length;
     h+='<div class="row'+(n>=QUOTA?' ok':'')+'"><span class="l">'+esc(p)+'</span><span class="t"><i style="width:'+Math.min(100,pct(n,QUOTA))+'%"></i></span><span class="v">'+n+' / '+QUOTA+'</span></div>';});
   h+='</div>';
+  h+='<div class="grid cards" style="margin-top:14px">'+otherPlacesCard(all)+'</div>';
   h+='<h2>Analysis</h2><div class="filters"><label for="flt" style="font-weight:700">Filter:</label><select id="flt"><option value="all">All ('+all.length+')</option>'+
     PLACES.concat([OTHER]).map(function(p){return '<option value="'+esc(p)+'"'+(ST.filter===p?' selected':'')+'>'+esc(p==OTHER?"Other places (not a destination)":p)+' ('+all.filter(function(r){return placeOf(r)===p;}).length+')</option>';}).join("")+'</select><span class="tag">'+T+' responses</span></div>';
+  function D(get,order){return {drill:{get:get,order:order}};}
+  function gx(f){return function(r){return P(r)[f];};}
+  function o(x,f){x.note=f;return x;}
   h+='<div class="grid cards">'+
    bars("Destination",tally(rows,function(r){return placeOf(r);},PLACES.concat([OTHER])),T)+
-   bars("Gender",tally(rows,function(r){return P(r).gender;},GENDER),T)+
-   bars("Age",tally(rows,function(r){return P(r).age;},AGE),T)+
-   bars("Residence",tally(rows,function(r){return P(r).residence;}),T)+
-   bars("Loyalty programmes they belong to",tally(rows,function(r){return P(r).loyalty_memberships;}),T,{note:"Each person can choose several."})+
-   bars("Questionnaire language",tally(rows,function(r){return P(r).language==="pt"?"Portuguese":"English";}),T)+
+   bars("Gender",tally(rows,gx("gender"),GENDER),T,D(gx("gender"),GENDER))+
+   bars("Age",tally(rows,gx("age"),AGE),T,D(gx("age"),AGE))+
+   bars("Residence",tally(rows,gx("residence")),T,D(gx("residence")))+
+   bars("Loyalty programmes they belong to",tally(rows,gx("loyalty_memberships")),T,{note:"Each person can choose several.",drill:{get:gx("loyalty_memberships")}})+
+   bars("Questionnaire language",tally(rows,function(r){return P(r).language==="pt"?"Portuguese":"English";}),T,D(function(r){return P(r).language==="pt"?"Portuguese":"English";}))+
    '</div>';
-  h+='<h2>Holidays</h2><div class="grid cards">'+
-   bars("Frequency",tally(rows,function(r){return P(r).frequency;},FREQ),T)+
-   bars("Season of the last visit",tally(rows,function(r){return P(r).season_last_visit;},SEASONS),T)+
-   bars("Nights on last visit",tally(rows,function(r){return P(r).nights_last_visit;},NIGHTS),T)+
-   bars("Travelled with",tally(rows,function(r){return P(r).travelled_with_last_visit;}),T)+
-   bars("Family group (besides the respondent)",tally(rows,function(r){return P(r).family_group;}),T,{note:"Only people who travelled with family; each can choose several."})+
-   bars("Main reason for the visit",tally(rows,function(r){return P(r).entry_point;}),T)+
-   ranks("What mattered most (ranking)",rows,function(r){return P(r).vertical_rank;})+
+  h+='<h2>Holidays</h2><p class="note" style="margin:-4px 0 12px;color:var(--muted);font-size:.84rem">Tap a card to see it by destination.</p><div class="grid cards">'+
+   bars("Frequency",tally(rows,gx("frequency"),FREQ),T,D(gx("frequency"),FREQ))+
+   bars("Season of the last visit",tally(rows,gx("season_last_visit"),SEASONS),T,D(gx("season_last_visit"),SEASONS))+
+   bars("Nights on last visit",tally(rows,gx("nights_last_visit"),NIGHTS),T,D(gx("nights_last_visit"),NIGHTS))+
+   bars("Travelled with",tally(rows,gx("travelled_with_last_visit")),T,D(gx("travelled_with_last_visit")))+
+   bars("Family group (besides the respondent)",tally(rows,gx("family_group")),T,{note:"Only people who travelled with family; each can choose several.",drill:{get:gx("family_group")}})+
+   bars("Main reason for the visit",tally(rows,gx("entry_point")),T,D(gx("entry_point")))+
+   ranks("What mattered most (ranking)",rows,gx("vertical_rank"))+
+   otherReasonsCard(rows)+
    '</div>';
-  h+='<h2>Loyalty programme</h2><div class="grid cards">'+
-   ranks("Mechanisms (ranking)",rows,function(r){return P(r).mechanism_rank;})+
-   ranks("Benefits (ranking)",rows,function(r){return P(r).benefit_rank;})+
-   bars("Bundle: how to join",tally(rows,function(r){return (P(r).program_built||{}).enter;}),T)+
-   bars("Bundle: how to earn",tally(rows,function(r){return (P(r).program_built||{}).earn;}),T)+
-   bars("Bundle: how to level up",tally(rows,function(r){return (P(r).program_built||{}).level_up;}),T)+
-   bars("Bundle: chosen benefits",tally(rows,function(r){return (P(r).program_built||{}).benefits;}),T,{note:"Up to 3 per person."})+
-   bars("Free or paid",tally(rows,function(r){return P(r).program_type;}),T)+
-   bars("Acceptable annual fee",tally(rows,function(r){return P(r).fee_band;}),T)+
-   bars("Activities",tally(rows,function(r){return P(r).cross_use;}),T)+
-   bars("Geographic reach",tally(rows,function(r){return P(r).geo_reach;}),T)+
+  h+='<h2>Loyalty programme: mechanisms and benefits</h2><div class="grid cards">'+
+   ranks("Mechanisms (ranking)",rows,gx("mechanism_rank"))+
+   ranks("Benefits (ranking)",rows,gx("benefit_rank"))+
+   '</div>';
+  function pb(f){return function(r){return (P(r).program_built||{})[f];};}
+  h+='<h2>Loyalty programme: bundle</h2><div class="grid cards">'+
+   bundleCards(rows,T)+
+   bars("Bundle: how to join",tally(rows,pb("enter")),T,D(pb("enter")))+
+   bars("Bundle: how to earn",tally(rows,pb("earn")),T,D(pb("earn")))+
+   bars("Bundle: how to level up",tally(rows,pb("level_up")),T,D(pb("level_up")))+
+   bars("Bundle: chosen benefit",tally(rows,pb("benefits")),T,D(pb("benefits")))+
+   '</div>';
+  h+='<h2>Loyalty programme: foundation</h2><div class="grid cards">'+
+   bars("Free or paid",tally(rows,gx("program_type")),T,D(gx("program_type")))+
+   bars("Acceptable annual fee",tally(rows,gx("fee_band")),T,D(gx("fee_band")))+
+   bars("Activities",tally(rows,gx("cross_use")),T,D(gx("cross_use")))+
+   bars("Geographic reach",tally(rows,gx("geo_reach")),T,D(gx("geo_reach")))+
    '</div>';
   h+='<h2>Budget</h2><div class="grid cards">'+
-   WTPQ.map(function(q){return bars(q.t,tally(rows,function(r){return P(r)[q.f];},q.lab.concat(["Prefer not to say"])).map(function(c){var t=wtpTier(q,c[0]);return [t?c[0]+" · "+t:c[0],c[1]];}),T);}).join("")+
+   WTPQ.map(function(q){return bars(q.t,tally(rows,gx(q.f),q.lab.concat(["Prefer not to say"])).map(function(c){var t=wtpTier(q,c[0]);return [t?c[0]+" · "+t:c[0],c[1]];}),T,{drill:{get:gx(q.f),order:q.lab.concat(["Prefer not to say"]),label:function(k){var t=wtpTier(q,k);return t?k+" · "+t:k;}}});}).join("")+
    wtpTable(rows)+
    '</div>';
   v.innerHTML=h;
+  bindDrills(v);
   qs("#flt").onchange=function(){ST.filter=this.value;paint();};
 }
 function kpi(n,l){return '<div class="kpi"><b>'+esc(n)+'</b><span>'+esc(l)+'</span></div>';}
@@ -356,6 +472,7 @@ var METHOD=[
   "All options have the same visual weight: same size, icons of the same style, no photographs and no brand or destination logos, to avoid creating associations. The only logo is the Nova SBE one on the cover.",
   "A single accent colour, a bluish slate grey. Green and red were avoided because they suggest right and wrong, and warm colours because they stimulate. The idea that cool, sober tones are more neutral comes from survey design practice and must be backed by literature before we cite it.",
   "The reach question does not name the place, and its options are generic (local, regional, all of Portugal), so people are not anchored on one destination. The place only appears in the explanation below each option.",
+  "Reading the overview: tap any card to see the same question by destination (share of each destination’s respondents, or average points for the rankings). Own reasons typed in “Something else” are left out of the points and listed in their own card, and the remaining items keep their relative order, so first place is always 8, 9 or 11 points. The answers typed in “None of these” are grouped by keyword rules (Algarve, Alentejo coast, Lisbon and Centre, North, Islands, Abroad), with the same spelling counted once; no AI is used in the panel.",
   "Scoring: respondents only see positions 1, 2, 3… In the analysis each position is converted to points in reverse. First place gets as many points as there are items (8 for the activities, 9 for the mechanisms, 11 for the benefits) and last place gets 1. The overview shows the average points per item (higher is better) and the share who ranked it first. If someone adds their own reason to the activities (9 items), their points use their own list, so first place gets 9. Respondents never see points.",
   "All three rankings ask for relevance (“from the most relevant to the least relevant”), not what the person wants. “Relevant” is used instead of “important” because it is more neutral: “important” suggests a positive judgement, while relevance only asks how much something matters to the person.",
   "Neutral language, no marketing adjectives. The cover says the programme is an illustration, not a real offer.",
