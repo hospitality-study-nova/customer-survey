@@ -234,14 +234,17 @@ function rankMatrix(d){
   var all=calc(rows),per=cols.map(function(c){return calc(g[c]);});
   var keys=Object.keys(all.s).sort(function(a,b){return all.s[b]/all.n[b]-all.s[a]/all.n[a];});
   var h='<table><thead><tr><th>Item</th>'+cols.map(function(c,i){return colHead(c,per[i].cnt);}).join("")+colHead("All",all.cnt)+'</tr></thead><tbody>';
+  var GOLD=["rgba(212,160,23,.62)","rgba(212,160,23,.40)","rgba(212,160,23,.22)"];
+  function topOf(x){return Object.keys(x.s).sort(function(a,b){return x.s[b]/x.n[b]-x.s[a]/x.n[a];}).slice(0,3);}
+  var tops=per.map(topOf),topAll=topOf(all);
   keys.forEach(function(k){
-    function cell(x){return x.n[k]?'<td style="'+heat(x.s[k]/x.n[k]/x.top)+'">'+(x.s[k]/x.n[k]).toFixed(1)+'</td>':'<td>-</td>';}
-    h+='<tr><td>'+esc(k)+'</td>'+per.map(cell).join("")+cell(all)+'</tr>';});
+    function cell(x,t){if(!x.n[k])return '<td>-</td>';var pos=t.indexOf(k);var st=pos>-1?'background:'+GOLD[pos]+';font-weight:700':heat(x.s[k]/x.n[k]/x.top);return '<td style="'+st+'">'+(x.s[k]/x.n[k]).toFixed(1)+'</td>';}
+    h+='<tr><td>'+esc(k)+'</td>'+per.map(function(x,i){return cell(x,tops[i]);}).join("")+cell(all,topAll)+'</tr>';});
   return h+'</tbody></table>';
 }
 function openDrill(i){
   var d=DR[i];if(!d)return;
-  var note=d.kind==="rank"?"Average points by destination: 1st place gets as many points as there are items, last place gets 1. Darker means higher.":"Share of the people at each destination who gave that answer (n is the number of people who answered). Darker means a larger share.";
+  var note=d.kind==="rank"?"Average points by destination: 1st place gets as many points as there are items, last place gets 1. Gold marks the top 3 of each column (darkest gold = 1st); other cells: darker means higher.":"Share of the people at each destination who gave that answer (n is the number of people who answered). Darker means a larger share.";
   qs("#mod").innerHTML='<div class="modal" id="dm"><div class="sheet" style="max-width:1100px"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start"><div><h3>'+esc(d.title)+' by destination</h3><p class="note" style="margin:4px 0 0;color:var(--muted);font-size:.82rem">'+esc(note)+'</p></div><button class="btn sm" id="dx">Close</button></div><div class="tablewrap" style="margin-top:12px">'+(d.kind==="rank"?rankMatrix(d):crossTable(d))+'</div></div></div>';
   qs("#dx").onclick=function(){qs("#mod").innerHTML="";};
   qs("#dm").onclick=function(e){if(e.target.id==="dm")qs("#mod").innerHTML="";};
