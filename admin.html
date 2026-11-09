@@ -146,7 +146,7 @@ sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_IN"&&!ST.user)boot();});
 function shell(){
   app.innerHTML='<header class="top"><div class="wrap"><div class="bar"><h1>Customer Survey<small>Private team area</small></h1>'+
    '<button class="btn pri sm" id="clink">Copy questionnaire link</button><a class="btn sm" id="tst" href="'+esc(formUrl()+'?test=1')+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Test survey (nothing is saved)</a><button class="btn sm" id="out">Sign out</button></div>'+
-   '<nav class="tabs"><button data-t="overview">Overview</button><button data-t="responses">Responses</button><button data-t="method">Methodology</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
+   '<nav class="tabs"><button data-t="overview">Overview</button><button data-t="segments">Segments</button><button data-t="responses">Responses</button><button data-t="method">Methodology</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
   qs("#clink").onclick=function(){copyText(formUrl(),this);};
   qs("#out").onclick=function(){sb.auth.signOut().then(function(){ST.user=null;ST.loaded=false;loginView();});};
   Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.onclick=function(){ST.tab=b.getAttribute("data-t");paint();};});
@@ -158,7 +158,7 @@ function paint(){
   if(ST.err){v.innerHTML='<p class="msg bad">'+esc(ST.err)+'</p>';return;}
   if(ST.tab==="method"){methodView(v);return;}
   if(!ST.loaded){v.innerHTML='<p class="msg">A carregar...</p>';return;}
-  if(ST.tab==="responses")responsesView(v);else overviewView(v);
+  if(ST.tab==="responses")responsesView(v);else if(ST.tab==="segments")segmentsView(v);else overviewView(v);
 }
 
 /* ---------- dados ---------- */
@@ -334,6 +334,57 @@ var GENDER=["Male","Female","Non binary","Prefer not to say"];
 var SEASONS=["Winter (December to February)","Spring (March to May)","Summer (June to August)","Autumn (September to November)"];
 var FREQ=["1 time","2 times","3 to 4 times","5 times or more"];
 var NIGHTS=["1 night","2 to 3 nights","4 to 7 nights","8 to 14 nights","15 nights or more"];
+/* ---------- segmentos: entry point x destino ---------- */
+var ENTRIES=["Hotel","Sports","Food and beverage","Golf","Beach","Marina","Nature and wellness","Nightlife","other"];
+function entryOf(r){var e=P(r).entry_point;return e?(e==="other"?"Something else":e):null;}
+function segCols(rows){
+  var cols=ENTRIES.map(function(e){return e==="other"?"Something else":e;}),g={};
+  cols.forEach(function(c){g[c]=rows.filter(function(r){return entryOf(r)===c;});});
+  return {cols:cols.filter(function(c){return g[c].length;}),g:g};
+}
+function segHead(cols,g,rows){
+  return '<thead><tr><th>Item</th>'+cols.map(function(c){return '<th>'+esc(c)+'<br><small>n='+g[c].length+'</small></th>';}).join("")+'<th>All<br><small>n='+rows.length+'</small></th></tr></thead>';
+}
+function segRank(title,note,rows,get){
+  var S=segCols(rows),cols=S.cols,g=S.g;
+  function calc(rs){var s={},n={},cnt=0,top=0;rs.forEach(function(r){var a=cleanRank(get(r));if(!a.length)return;cnt++;if(a.length>top)top=a.length;a.forEach(function(x,i){s[x]=(s[x]||0)+(a.length-i);n[x]=(n[x]||0)+1;});});return {s:s,n:n,cnt:cnt,top:top};}
+  var all=calc(rows),per=cols.map(function(c){return calc(g[c]);});
+  var h='<div class="card" style="grid-column:1/-1"><h3>'+esc(title)+'</h3><p class="note">'+esc(note)+'</p>';
+  if(!all.cnt)return h+'<p class="empty">No data.</p></div>';
+  var keys=Object.keys(all.s).sort(function(a,b){return all.s[b]/all.n[b]-all.s[a]/all.n[a];});
+  var GOLD=["rgba(212,160,23,.62)","rgba(212,160,23,.40)","rgba(212,160,23,.22)"];
+  function topOf(x){return Object.keys(x.s).sort(function(a,b){return x.s[b]/x.n[b]-x.s[a]/x.n[a];}).slice(0,3);}
+  var tops=per.map(topOf),topAll=topOf(all);
+  h+='<div class="tablewrap"><table>'+segHead(cols,g,rows).replace('<th>All<br><small>n='+rows.length,'<th>All<br><small>n='+all.cnt)+'<tbody>';
+  keys.forEach(function(k){
+    function cell(x,t){if(!x.n[k])return '<td>-</td>';var pos=t.indexOf(k);var st=pos>-1?'background:'+GOLD[pos]+';font-weight:700':heat(x.s[k]/x.n[k]/x.top);return '<td style="'+st+'">'+(x.s[k]/x.n[k]).toFixed(1)+'</td>';}
+    h+='<tr><td>'+esc(k)+'</td>'+per.map(function(x,i){return cell(x,tops[i]);}).join("")+cell(all,topAll)+'</tr>';});
+  return h+'</tbody></table></div></div>';
+}
+function segWtp(rows){
+  var S=segCols(rows),cols=S.cols,g=S.g;
+  var h='<div class="card" style="grid-column:1/-1"><h3>Willingness to pay by entry point</h3><p class="note">Average position in the Algarve price market (P50 = market median; P75 = higher than 75% of prices) and the typical band (middle answer). Compare across columns; the “All” column is the average for the selected destination.</p><div class="tablewrap"><table>'+segHead(cols,g,rows)+'<tbody>';
+  WTPQ.forEach(function(q){
+    function cell(rs){var v=[],ix=[];rs.forEach(function(r){var x=wtpPct(q,P(r)[q.f]);if(x!=null){v.push(x);ix.push(q.lab.indexOf(P(r)[q.f]));}});ix.sort(function(a,b){return a-b;});
+      return v.length?'<td><b>P'+Math.round(v.reduce(function(a,b){return a+b;},0)/v.length)+'</b> <small>(n='+v.length+')</small><br><small>'+esc(q.lab[ix[Math.floor((ix.length-1)/2)]])+'</small></td>':'<td>-</td>';}
+    h+='<tr><td>'+esc(q.t.replace(", per night"," / night"))+'</td>'+cols.map(function(c){return cell(g[c]);}).join("")+cell(rows)+'</tr>';});
+  return h+'</tbody></table></div></div>';
+}
+function segmentsView(v){
+  var all=complete(),sel=ST.segPlace||"all";
+  var rows=sel==="all"?all:all.filter(function(r){return placeOf(r)===sel;});
+  var noEntry=rows.filter(function(r){return !entryOf(r);}).length;
+  var h='<h2>Segments</h2><div class="filters"><label for="sp" style="font-weight:700">Destination:</label><select id="sp"><option value="all">All ('+all.length+')</option>'+
+    destCols().map(function(p){return '<option value="'+esc(p)+'"'+(sel===p?' selected':'')+'>'+esc(p===OTHER?"Other places (not a destination)":p)+' ('+all.filter(function(r){return placeOf(r)===p;}).length+')</option>';}).join("")+'</select></div>'+
+    '<p class="note" style="margin:0 0 12px;color:var(--muted);font-size:.84rem">A segment is the entry point: the activity that brought the person to the destination. Columns with small n (under 10) are only indicative, and with a single destination selected most columns will be small.'+(noEntry?' '+noEntry+' response(s) without an entry point are left out of the columns but counted in “All”.':'')+'</p><div class="grid cards">';
+  h+=segRank("What mattered most, by entry point","Average points: 1st place = number of items, last place = 1. Gold marks the top 3 of each column (darkest = 1st). Own reasons are left out.",rows,function(r){return P(r).vertical_rank;});
+  h+=segRank("Mechanisms, by entry point","Same scoring as Steering 1: what each type of person tends to rank higher. Gold = top 3 of each column.",rows,function(r){return P(r).mechanism_rank;});
+  h+=segRank("Benefits, by entry point","Same scoring. Gold = top 3 of each column.",rows,function(r){return P(r).benefit_rank;});
+  h+=segWtp(rows);
+  h+='</div>';
+  v.innerHTML=h;
+  qs("#sp").onchange=function(){ST.segPlace=this.value;paint();};
+}
 function overviewView(v){
   DR=[];
   var all=complete(),rows=filtered(),T=rows.length;
