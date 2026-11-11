@@ -396,21 +396,116 @@ function segmentsView(v){
   v.innerHTML=h;
   qs("#sp").onchange=function(){ST.segPlace=this.value;paint();};
 }
-/* ---------- personas: lente unica = com quem viaja ---------- */
-var PERS=[
- {k:"Family",rule:"Travelled with family",test:function(r){return P(r).travelled_with_last_visit==="Family";},
-  voice:"We come together, all ages. I want the stay to be easy and for the programme to recognise us when we come back.",
-  partners:["Babysitting and kids’ clubs","Family restaurants and beach services","Surf, tennis and water-sports schools","Flexible booking and family rooms"]},
- {k:"Friends",rule:"Travelled with friends or a club",test:function(r){var w=P(r).travelled_with_last_visit;return w==="With friends"||w==="With a club or similar";},
-  voice:"We come for the beach and the nights out. I want points, a quick sign-up and perks that save time.",
-  partners:["Beach clubs, bars and nightlife","Group activities (water sports, padel)","Restaurants with group deals","Quick join and instant perks"]},
- {k:"Couple",rule:"Travelled as a couple",test:function(r){return P(r).travelled_with_last_visit==="As a couple";},
-  voice:"We come to switch off. I accept paying a bit more if the stay and the recognition are better.",
-  partners:["Spas and wellness","Fine dining and wine experiences","Hotel upgrades and late check-out","Flexible booking"]}
+/* ---------- personas: varias opcoes, testadas com os dados ---------- */
+var AGEP=function(a){return a==="18 to 24"?"18 to 24":(a==="55 to 64"||a==="65 or older")?"55 or older":a?"25 to 54":null;};
+function entryP(r){var p=P(r),e=p.entry_point;if(e==="other"){var t=String(p.entry_point_other||"").toLowerCase();if(/hotel e praia/.test(t))return "Beach";return "Other motives";}
+  if(e==="Beach")return "Beach";if(e==="Nightlife")return "Nightlife";if(e==="Hotel"||e==="Nature and wellness")return "Hotel and wellness";return e?"Other motives":null;}
+function jan(r){return WTPQ[0].lab.indexOf(P(r)[WTPQ[0].f]);}
+var POPTS=[
+ {k:"tier",name:"Price and programme tier",
+  desc:"Formed from what people would pay and how broad a programme they want. Clustering of these answers found three stable groups; the simple rules below reproduce them with about 90% accuracy and cover everyone.",
+  skip:/^(wtp_|prog|geo|cross)/,skipNote:"the price and programme answers, which define the groups",
+  groups:[{k:"Premium",rule:"Would pay the €111 to €150 band or more for a hotel night in January",test:function(r){return jan(r)>=2;}},
+   {k:"Explorer",rule:"Not premium, and wants the programme across several activities",test:function(r){return P(r).cross_use==="Several activities";}},
+   {k:"Single-focus",rule:"Everyone else: one or mostly one activity",test:function(){return true;}}]},
+ {k:"age",name:"Age",desc:"Three age bands. Simple and easy to recruit, but 55 or older is a small group.",skip:null,
+  groups:[{k:"18 to 24",rule:"Aged 18 to 24",test:function(r){return AGEP(P(r).age)==="18 to 24";}},
+   {k:"25 to 54",rule:"Aged 25 to 54",test:function(r){return AGEP(P(r).age)==="25 to 54";}},
+   {k:"55 or older",rule:"Aged 55 or older",test:function(r){return AGEP(P(r).age)==="55 or older";}}]},
+ {k:"entry",name:"Entry point (what brings them)",desc:"The activity that mostly brings the person to the destination. Sport, golf and marina are too few to stand alone, so they sit in Other motives with home, family visits, culture and food.",
+  skip:/^V_/,skipNote:"the “what mattered most” ranking, which measures the same thing as the entry point",
+  groups:[{k:"Beach",rule:"Entry point: Beach",test:function(r){return entryP(r)==="Beach";}},
+   {k:"Nightlife",rule:"Entry point: Nightlife",test:function(r){return entryP(r)==="Nightlife";}},
+   {k:"Hotel and wellness",rule:"Entry point: Hotel, or Nature and wellness",test:function(r){return entryP(r)==="Hotel and wellness";}},
+   {k:"Other motives",rule:"Home, family visits, culture, food, sport, golf, marina",test:function(r){return entryP(r)==="Other motives";}}]},
+ {k:"party",name:"Travel companion",desc:"Who the person travelled with. Alone and no answer are left out.",skip:null,
+  groups:[{k:"Family",rule:"Travelled with family",test:function(r){return P(r).travelled_with_last_visit==="Family";},
+    voice:"We come together, all ages. I want the stay to be easy and for the programme to recognise us when we come back.",partners:["Babysitting and kids’ clubs","Family restaurants and beach services","Surf, tennis and water-sports schools","Flexible booking and family rooms"]},
+   {k:"Friends",rule:"Travelled with friends or a club",test:function(r){var w=P(r).travelled_with_last_visit;return w==="With friends"||w==="With a club or similar";},
+    voice:"We come for the beach and the nights out. I want points, a quick sign-up and perks that save time.",partners:["Beach clubs, bars and nightlife","Group activities (water sports, padel)","Restaurants with group deals","Quick join and instant perks"]},
+   {k:"Couple",rule:"Travelled as a couple",test:function(r){return P(r).travelled_with_last_visit==="As a couple";},
+    voice:"We come to switch off. I accept paying a bit more if the stay and the recognition are better.",partners:["Spas and wellness","Fine dining and wine experiences","Hotel upgrades and late check-out","Flexible booking"]}]}
 ];
-var PSUB=[["all","Everyone"],["18 to 24","Aged 18 to 24"],["25+","Aged 25 or older"],["habitual","Visited 5 times or more"]];
-function persSub(r){var s=ST.persSub||"all",p=P(r);
-  if(s==="all")return true;if(s==="18 to 24")return p.age==="18 to 24";if(s==="25+")return !!p.age&&p.age!=="18 to 24";return p.frequency==="5 times or more";}
+function assignOpt(o,rows){return rows.map(function(r){for(var i=0;i<o.groups.length;i++){if(o.groups[i].test(r))return i;}return -1;});}
+function rkScore(raw,item){var a=cleanRank(raw),i=a.indexOf(item);return(i<0||a.length<2)?null:(a.length-1-i)/(a.length-1);}
+function outcomeList(rows){
+  var L=[];function add(id,label,sec,scale,f){L.push({id:id,label:label,sec:sec,scale:scale,vals:rows.map(f)});}
+  var pr={"Free, basic benefits":0,"Free, with an upgrade":1,"Paid, more and better benefits":2},gr={"Local":0,"Regional":1,"All of Portugal":2},cr={"One activity only":0,"Mostly one activity":1,"Several activities":2};
+  WTPQ.forEach(function(q,qi){add("wtp_"+qi,q.t.replace(", per night","").replace(" (double room, 2 adults, breakfast)",""),"Price","0 to 4",function(r){var i=q.lab.indexOf(P(r)[q.f]);return i<0?null:i;});});
+  add("prog","Programme: paid is preferred","Programme","0 to 2",function(r){var v=pr[P(r).program_type];return v==null?null:v;});
+  add("geo","Programme reach: wider","Programme","0 to 2",function(r){var v=gr[P(r).geo_reach];return v==null?null:v;});
+  add("cross","Programme: several activities","Programme","0 to 2",function(r){var v=cr[P(r).cross_use];return v==null?null:v;});
+  [["vertical_rank","V_","What mattered most"],["mechanism_rank","M_","Mechanism"],["benefit_rank","B_","Benefit"]].forEach(function(t){
+    var items={};rows.forEach(function(r){cleanRank(P(r)[t[0]]).forEach(function(x){items[x]=1;});});
+    Object.keys(items).sort().forEach(function(it){add(t[1]+it,it,t[2],"0 to 1 (1 = ranked first)",function(r){return rkScore(P(r)[t[0]],it);});});});
+  return L;
+}
+function lgam(x){var c=[76.18009172947146,-86.50532032941677,24.01409824083091,-1.231739572450155,0.1208650973866179e-2,-0.5395239384953e-5],y=x,t=x+5.5;t-=(x+0.5)*Math.log(t);var s=1.000000000190015;for(var j=0;j<6;j++)s+=c[j]/++y;return -t+Math.log(2.5066282746310005*s/x);}
+function gammq(a,x){if(x<=0)return 1;
+  if(x<a+1){var ap=a,sum=1/a,del=sum;for(var n=0;n<300;n++){ap++;del*=x/ap;sum+=del;if(Math.abs(del)<Math.abs(sum)*1e-13)break;}return Math.max(0,1-sum*Math.exp(-x+a*Math.log(x)-lgam(a)));}
+  var b=x+1-a,c=1e300,d=1/b,h=d;for(var i=1;i<300;i++){var an=-i*(i-a);b+=2;d=an*d+b;if(Math.abs(d)<1e-300)d=1e-300;c=b+an/c;if(Math.abs(c)<1e-300)c=1e-300;d=1/d;var de=d*c;h*=de;if(Math.abs(de-1)<1e-13)break;}
+  return Math.min(1,Math.exp(-x+a*Math.log(x)-lgam(a))*h);}
+function kwTest(vals,grp,k){
+  var ix=[];for(var i=0;i<vals.length;i++){if(grp[i]>=0&&vals[i]!=null)ix.push(i);}
+  var cnt=new Array(k).fill(0);ix.forEach(function(i){cnt[grp[i]]++;});
+  var n=ix.length;if(n<10||cnt.some(function(c){return c<5;}))return null;
+  var ord=ix.slice().sort(function(a,b){return vals[a]-vals[b];}),rank={},t=0,tie=0;
+  for(var s=0;s<n;){var e=s;while(e+1<n&&vals[ord[e+1]]===vals[ord[s]])e++;var avg=(s+e)/2+1;for(var q=s;q<=e;q++)rank[ord[q]]=avg;var c=e-s+1;tie+=c*c*c-c;s=e+1;}
+  if(tie===n*n*n-n)return null;
+  var g=ix.map(function(i){return grp[i];}),rk=ix.map(function(i){return rank[i];});
+  function H(gg){var sum=new Array(k).fill(0);for(var i=0;i<n;i++)sum[gg[i]]+=rk[i];var h=0;for(var j=0;j<k;j++)h+=sum[j]*sum[j]/cnt[j];return (12/(n*(n+1))*h-3*(n+1))/(1-tie/(n*n*n-n));}
+  var h0=H(g);
+  return {H:h0,p:gammq((k-1)/2,h0/2),eps:Math.max(0,(h0-k+1)/(n-k)),n:n};
+}
+function mean(a){a=a.filter(function(x){return x!=null;});return a.length?a.reduce(function(s,x){return s+x;},0)/a.length:null;}
+function dmin(n,N){return 2.8*Math.sqrt(1/n+1/Math.max(1,N-n));}
+function personasView(v){
+  var all=complete(),opt=POPTS.filter(function(o){return o.k===(ST.persOpt||"tier");})[0]||POPTS[0];
+  var asg=assignOpt(opt,all),k=opt.groups.length;
+  var rowsBy=opt.groups.map(function(g,i){return all.filter(function(r,j){return asg[j]===i;});});
+  var assigned=rowsBy.reduce(function(a,x){return a+x.length;},0),un=all.length-assigned;
+  var L=outcomeList(all);
+  var res=[];L.forEach(function(o){if(opt.skip&&opt.skip.test(o.id))return;var t=kwTest(o.vals,asg,k);if(t){res.push({o:o,t:t});}});
+  var m=res.length,srt=res.slice().sort(function(a,b){return a.t.p-b.t.p;}),minq=1;
+  for(var i=m-1;i>=0;i--){minq=Math.min(minq,srt[i].t.p*m/(i+1));srt[i].q=Math.min(1,minq);}
+  var sig=srt.filter(function(x){return x.t.p<0.05;}),sigq=srt.filter(function(x){return x.q<0.05;});
+  var h='<h2>Personas</h2><div class="filters" style="gap:6px">'+POPTS.map(function(o){return '<button class="btn sm'+(o.k===opt.k?' pri':'')+'" data-po="'+o.k+'">'+esc(o.name)+'</button>';}).join("")+'</div>';
+  h+='<div class="card" style="margin-bottom:14px"><h3>'+esc(opt.name)+'</h3><p class="note">'+esc(opt.desc)+'</p><p class="note"><b>Check:</b> '+assigned+' assigned'+(un?' + '+un+' not assigned':'')+' = '+all.length+' complete responses, each in exactly one group.</p>'+
+   '<p class="note"><b>Does the split matter?</b> '+m+' answers compared across the groups'+(opt.skipNote?' (leaving out '+opt.skipNote+')':'')+'. <b>'+sig.length+'</b> differ at p below 0.05 (about '+Math.round(m*0.05)+' would by chance), and <b>'+sigq.length+'</b> survive the correction for many tests. Tests are Kruskal-Wallis on '+all.length+' people; the effect is the epsilon squared (0.01 small, 0.06 medium, 0.14 large).</p>';
+  if(sig.length){
+    h+='<div class="tablewrap"><table><thead><tr><th>Answer</th><th>Type</th>'+opt.groups.map(function(g){return '<th>'+esc(g.k)+'</th>';}).join("")+'<th>p</th><th>Effect</th><th>Strength</th></tr></thead><tbody>';
+    sig.slice(0,14).forEach(function(x){var ms=rowsBy.map(function(rs){var idx=rs.map(function(r){return all.indexOf(r);});return mean(idx.map(function(i){return x.o.vals[i];}));});
+      var mx=Math.max.apply(null,ms.filter(function(a){return a!=null;}));
+      h+='<tr><td>'+esc(x.o.label)+'<br><small>'+esc(x.o.scale)+'</small></td><td>'+esc(x.o.sec)+'</td>'+ms.map(function(a){return '<td'+(a===mx?' style="background:rgba(212,160,23,.4);font-weight:700"':'')+'>'+(a==null?"-":a.toFixed(2))+'</td>';}).join("")+'<td>'+(x.t.p<0.001?"<0.001":x.t.p.toFixed(3))+'</td><td>'+x.t.eps.toFixed(2)+'</td><td>'+(x.q<0.05?'<b>solid</b>':x.q<0.15?'hint':'weak')+'</td></tr>';});
+    h+='</tbody></table></div><p class="note" style="margin-top:6px">Gold = the group with the highest value. “Solid” survives the correction for many tests; “hint” and “weak” do not, so read them as tendencies to confirm with more responses.</p>';
+  }else h+='<p class="empty">No answers differ clearly across these groups.</p>';
+  h+='</div><div class="grid cards">';
+  opt.groups.forEach(function(g,gi){
+    var rs=rowsBy[gi],n=rs.length,st=n>=40?"Solid sample":n>=20?"Fair sample":"Indicative only";
+    h+='<div class="card pers"><div class="ph"><h3>'+esc(g.k)+'</h3><span class="tag">n='+n+' · '+pct(n,all.length)+'% · '+st+'</span></div><p class="note"><b>Rule:</b> '+esc(g.rule)+'</p>'+(g.voice?'<p class="voice">“'+esc(g.voice)+'” <small>(team hypothesis)</small></p>':'');
+    if(!n){h+='<p class="empty">No data.</p></div>';return;}
+    var up=[],dn=[];sig.forEach(function(x){var ids=rs.map(function(r){return all.indexOf(r);}),oth=[];all.forEach(function(r,j){if(asg[j]>-1&&asg[j]!==gi)oth.push(x.o.vals[j]);});
+      var a=mean(ids.map(function(i){return x.o.vals[i];})),b=mean(oth);if(a==null||b==null)return;var sd=Math.max(0.01,(Math.max.apply(null,x.o.vals.filter(function(z){return z!=null;}))-Math.min.apply(null,x.o.vals.filter(function(z){return z!=null;})))/4);
+      (a>b?up:dn).push({l:x.o.label,a:a,b:b,z:Math.abs(a-b)/sd,q:x.q});});
+    up.sort(function(a,b){return b.z-a.z;});dn.sort(function(a,b){return b.z-a.z;});
+    function li(arr){return arr.slice(0,3).map(function(x){return '<li>'+esc(x.l)+' <small>'+x.a.toFixed(2)+' vs '+x.b.toFixed(2)+(x.q<0.05?' · solid':'')+'</small></li>';}).join("");}
+    h+='<p class="pt">Stands out (versus the other groups)</p>'+((up.length||dn.length)?'<ul class="pn">'+(up.length?'<li><b>Higher</b></li>'+li(up):'')+(dn.length?'<li><b>Lower</b></li>'+li(dn):'')+'</ul>':'<p class="ps">Nothing clear yet.</p>');
+    h+='<p class="pt">Who they are</p><p class="ps">Age: '+persShare(rs,function(r){return P(r).age;},3)+'<br>Travelled with: '+persShare(rs,function(r){return P(r).travelled_with_last_visit;},3)+'<br>Visits: '+persShare(rs,function(r){return P(r).frequency;},2)+'<br>Entry point: '+persShare(rs,function(r){var e=P(r).entry_point;return e==="other"?"Something else":e;},3)+'</p>';
+    h+=persList("What mattered most (average points)",persPts(rs,function(r){return P(r).vertical_rank;}));
+    h+=persList("Mechanisms",persPts(rs,function(r){return P(r).mechanism_rank;}));
+    h+=persList("Benefits",persPts(rs,function(r){return P(r).benefit_rank;}));
+    h+='<p class="pt">What they would pay (position in the Algarve market)</p>'+persWtp(rs);
+    h+='<p class="pt">Programme they would build</p><p class="ps">Type: '+persShare(rs,function(r){return P(r).program_type;},3)+'<br>Annual fee: '+persShare(rs,function(r){return P(r).fee_band;},2)+'<br>Activities: '+persShare(rs,function(r){return P(r).cross_use;},2)+'<br>Reach: '+persShare(rs,function(r){return P(r).geo_reach;},3)+'</p>';
+    if(g.partners)h+='<p class="pt">Partner ideas <span class="hyp">hypothesis from the team, not from the data</span></p><ul class="pn">'+g.partners.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul>';
+    h+='</div>';});
+  h+='</div>';
+  h+='<div class="card" style="margin-top:14px"><h3>What is missing to be sure</h3><p class="note">The smallest difference we can reliably detect between one group and the rest (in standard deviations; 0.2 small, 0.5 medium, 0.8 large). Each extra response lowers it. Today, and after +10 responses in that group:</p><div class="tablewrap"><table><thead><tr><th>Group</th><th>n now</th><th>Smallest difference detectable now</th><th>After +10</th><th>Responses in the group to detect a medium difference (0.5)</th></tr></thead><tbody>';
+  opt.groups.forEach(function(g,gi){var n=rowsBy[gi].length,N=assigned;var need=1/(Math.pow(0.5/2.8,2)-1/Math.max(1,N-n));var needTxt=need>0&&isFinite(need)?Math.max(0,Math.ceil(need)-n):"many";
+    h+='<tr><td>'+esc(g.k)+'</td><td>'+n+'</td><td>'+dmin(n,N).toFixed(2)+'</td><td>'+dmin(n+10,N+10).toFixed(2)+'</td><td>'+(needTxt===0?'enough':needTxt==="many"?'many':'about '+needTxt+' more')+'</td></tr>';});
+  h+='</tbody></table></div></div>';
+  v.innerHTML=h;
+  Array.prototype.forEach.call(v.querySelectorAll("[data-po]"),function(b){b.onclick=function(){ST.persOpt=b.getAttribute("data-po");paint();};});
+}
 function persPts(rows,get){
   var s={},n={};rows.forEach(function(r){var a=cleanRank(get(r));a.forEach(function(x,i){s[x]=(s[x]||0)+(a.length-i);n[x]=(n[x]||0)+1;});});
   return Object.keys(s).map(function(k){return [k,s[k]/n[k],n[k]];}).sort(function(a,b){return b[1]-a[1];});
@@ -432,32 +527,6 @@ function persWtp(rows){
   return h+'</tbody></table>';
 }
 function persIdx(rows){var v=[];rows.forEach(function(r){WTPQ.forEach(function(q){var i=q.lab.indexOf(P(r)[q.f]);if(i>-1)v.push(i);});});return v.length?v.reduce(function(a,b){return a+b;},0)/v.length:null;}
-function personasView(v){
-  var all=complete(),sub=all.filter(persSub),sel=ST.persSub||"all";
-  var groups=PERS.map(function(p){return {p:p,rows:sub.filter(p.test)};});
-  var assigned=groups.reduce(function(a,g){return a+g.rows.length;},0);
-  var un=sub.filter(function(r){return !PERS.some(function(p){return p.test(r);});});
-  var h='<h2>Personas</h2><div class="filters"><label for="ps" style="font-weight:700">Show:</label><select id="ps">'+PSUB.map(function(o){return '<option value="'+o[0]+'"'+(sel===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join("")+'</select></div>'+
-   '<p class="note" style="margin:0 0 12px;color:var(--muted);font-size:.84rem">One single lens makes the personas mutually exclusive and exhaustive: who the person travelled with. Each respondent is in exactly one persona (check: '+assigned+' assigned + '+un.length+' not assigned = '+sub.length+' complete responses). Age and repeat visits are sub-profiles, so use the filter above to see a persona for one of them. Differences are indications, not tested proof; groups with n under 20 are only indicative.</p>';
-  h+='<div class="card" style="margin-bottom:14px"><h3>At a glance</h3><div class="tablewrap"><table><thead><tr><th>Persona</th><th>n</th><th>% of sample</th><th>Willingness to pay (0 to 4)</th><th>Accept a paid programme</th><th>Reach: all of Portugal</th><th>Aged 25 or older</th><th>5+ visits</th><th>8+ nights</th></tr></thead><tbody>';
-  groups.forEach(function(g){var rs=g.rows,n=rs.length;function s(f){return n?pct(rs.filter(f).length,n)+"%":"-";}var ix=persIdx(rs);
-    h+='<tr><td><b>'+esc(g.p.k)+'</b></td><td>'+n+'</td><td>'+pct(n,sub.length)+'%</td><td>'+(ix==null?"-":ix.toFixed(2))+'</td><td>'+s(function(r){return String(P(r).program_type||"").indexOf("Paid")===0;})+'</td><td>'+s(function(r){return P(r).geo_reach==="All of Portugal";})+'</td><td>'+s(function(r){return !!P(r).age&&P(r).age!=="18 to 24";})+'</td><td>'+s(function(r){return P(r).frequency==="5 times or more";})+'</td><td>'+s(function(r){var x=P(r).nights_last_visit;return x==="8 to 14 nights"||x==="15 nights or more";})+'</td></tr>';});
-  h+='<tr><td>Not assigned</td><td>'+un.length+'</td><td>'+pct(un.length,sub.length)+'%</td><td colspan="6"><small>Travelled alone or no answer. Left out of the averages.</small></td></tr></tbody></table></div></div><div class="grid cards">';
-  groups.forEach(function(g){
-    var rs=g.rows,n=rs.length,st=n>=40?"Solid sample":n>=20?"Fair sample":"Indicative only";
-    h+='<div class="card pers"><div class="ph"><h3>'+esc(g.p.k)+'</h3><span class="tag">n='+n+' · '+st+'</span></div><p class="note"><b>Rule:</b> '+esc(g.p.rule)+'</p><p class="voice">“'+esc(g.p.voice)+'”</p>';
-    if(!n){h+='<p class="empty">No data.</p></div>';return;}
-    h+='<p class="pt">Who they are</p><p class="ps">Age: '+persShare(rs,function(r){return P(r).age;},3)+'<br>Residence: '+persShare(rs,function(r){var x=P(r).residence||"";return x.indexOf("live in Portugal")>-1?"Lives in Portugal":x.indexOf("live abroad")>-1?"Lives abroad":x;},2)+'<br>Visits: '+persShare(rs,function(r){return P(r).frequency;},3)+'<br>Nights: '+persShare(rs,function(r){return P(r).nights_last_visit;},3)+'<br>Entry point: '+persShare(rs,function(r){var e=P(r).entry_point;return e==="other"?"Something else":e;},3)+'</p>';
-    h+=persList("What mattered most (average points, 1st = highest)",persPts(rs,function(r){return P(r).vertical_rank;}));
-    h+=persList("Mechanisms",persPts(rs,function(r){return P(r).mechanism_rank;}));
-    h+=persList("Benefits",persPts(rs,function(r){return P(r).benefit_rank;}));
-    h+='<p class="pt">What they would pay (position in the Algarve market)</p>'+persWtp(rs);
-    h+='<p class="pt">Programme they would build</p><p class="ps">Type: '+persShare(rs,function(r){return P(r).program_type;},3)+'<br>Annual fee: '+persShare(rs,function(r){return P(r).fee_band;},2)+'<br>Activities: '+persShare(rs,function(r){return P(r).cross_use;},2)+'<br>Reach: '+persShare(rs,function(r){return P(r).geo_reach;},3)+'</p>';
-    h+='<p class="pt">Partner ideas <span class="hyp">hypothesis from the team, not from the data</span></p><ul class="pn">'+g.p.partners.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul></div>';});
-  h+='</div>';
-  v.innerHTML=h;
-  qs("#ps").onchange=function(){ST.persSub=this.value;paint();};
-}
 function overviewView(v){
   DR=[];
   var all=complete(),rows=filtered(),T=rows.length;
@@ -599,7 +668,7 @@ var METHOD=[
   "All options have the same visual weight: same size, icons of the same style, no photographs and no brand or destination logos, to avoid creating associations. The only logo is the Nova SBE one on the cover.",
   "A single accent colour, a bluish slate grey. Green and red were avoided because they suggest right and wrong, and warm colours because they stimulate. The idea that cool, sober tones are more neutral comes from survey design practice and must be backed by literature before we cite it.",
   "The reach question does not name the place, and its options are generic (local, regional, all of Portugal), so people are not anchored on one destination. The place only appears in the explanation below each option.",
-  "Personas: one single lens, who the person travelled with (family, friends or club, couple), so each respondent is in exactly one persona and every complete response is counted; people who travelled alone or did not answer are listed as not assigned. Age and repeat visits are shown as sub-profiles with the filter. Values (what mattered, mechanisms, benefits) and prices are not used to form the groups, so they can validate them. Sizes: 40 or more is a solid sample, 20 to 39 fair, under 20 indicative only. The quotes and partner ideas are hypotheses written by the team, not survey results.",
+  "Personas: four ways of forming personas are compared with the same tests, so the team can see which one the data support. Price and programme tier is found by clustering the answers; age, entry point and travel companion are descriptive splits. Each respondent is in exactly one group. For every split, each answer (prices, programme choices, rankings of what mattered, mechanisms and benefits) is compared across the groups with the Kruskal-Wallis test, and the answers that define the split are left out so the check is not circular. Solid means it survives the correction for many tests; hint and weak do not. The table at the end shows how many more responses each group needs. Quotes and partner ideas are hypotheses written by the team, not survey results.",
   "Reading the overview: tap any card to see the same question by destination (share of each destination’s respondents, or average points for the rankings). Own reasons typed in “Something else” are left out of the points and listed in their own card, and the remaining items keep their relative order, so first place is always 8, 9 or 11 points. The answers typed in “None of these” are grouped by keyword rules (Algarve, Alentejo coast, Lisbon and Centre, North, Islands, Abroad), with the same spelling counted once; no AI is used in the panel.",
   "Scoring: respondents only see positions 1, 2, 3… In the analysis each position is converted to points in reverse. First place gets as many points as there are items (8 for the activities, 9 for the mechanisms, 11 for the benefits) and last place gets 1. The overview shows the average points per item (higher is better) and the share who ranked it first. If someone adds their own reason to the activities (9 items), their points use their own list, so first place gets 9. Respondents never see points.",
   "All three rankings ask for relevance (“from the most relevant to the least relevant”), not what the person wants. “Relevant” is used instead of “important” because it is more neutral: “important” suggests a positive judgement, while relevance only asks how much something matters to the person.",
