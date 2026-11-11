@@ -401,19 +401,22 @@ function segmentsView(v){
 var AGEP=function(a){return a==="18 to 24"?"18 to 24":(a==="55 to 64"||a==="65 or older")?"55 or older":a?"25 to 54":null;};
 function entryP(r){var p=P(r),e=p.entry_point;if(e==="other"){var t=String(p.entry_point_other||"").toLowerCase();if(/hotel e praia/.test(t))return "Beach";return "Other motives";}
   if(e==="Beach")return "Beach";if(e==="Nightlife")return "Nightlife";if(e==="Hotel"||e==="Nature and wellness")return "Hotel and wellness";return e?"Other motives":null;}
+function actInt(r){var v=cleanRank(P(r).vertical_rank);return ["Golf","Sports","Marina"].some(function(x){var i=v.indexOf(x);return i>-1&&i<3;});}
 function jan(r){return WTPQ[0].lab.indexOf(P(r)[WTPQ[0].f]);}
 var POPTS=[
- {k:"best",name:"Best set (combined)",
-  desc:"The strongest findings put together, each person assigned to the first rule they meet, so the groups do not overlap: people drawn by sport, golf or marina first, then those who would pay more, then everyone else by who they travelled with. The number of personas is not fixed: each one is labelled validated, partly supported or still to validate.",
-  skip:/^(wtp_|prog|geo|cross|V_Golf|V_Sports|V_Marina)/,skipNote:"the price and programme answers and the sport, golf and marina rankings, which define the first two groups",
-  groups:[{k:"Active (sport, golf, marina)",rule:"Entry point is Golf, Sports or Marina",test:function(r){var e=P(r).entry_point;return e==="Golf"||e==="Sports"||e==="Marina";},
-    recruit:"Interview 10 or more: golfers, and people who come for padel, tennis or the marina. Mix ages and couples, friends and family."},
-   {k:"Premium",rule:"Not Active, and would pay the €111 to €150 band or more for a hotel night in January",test:function(r){return jan(r)>=2;},
-    recruit:"Interview 10 or more from 4 or 5 star hotels (Vilamoura, Tróia), aged 25 or over."},
-   {k:"Friends",rule:"Not Active or Premium, and travelled with friends or a club",test:function(r){var w=P(r).travelled_with_last_visit;return w==="With friends"||w==="With a club or similar";}},
-   {k:"Family",rule:"Not Active or Premium, and travelled with family",test:function(r){return P(r).travelled_with_last_visit==="Family";}},
-   {k:"Couple",rule:"Not Active or Premium, and travelled as a couple",test:function(r){return P(r).travelled_with_last_visit==="As a couple";},
-    recruit:"Interview 10 or more couples aged 25 or over."}]},
+ {k:"best",name:"Best set (5 personas)",
+  desc:"Who the person travelled with, and only for families a second split, so the groups do not overlap: families are split by interest in sport, golf or marina (any of them in the top 3 of what mattered most), then by age. Friends and couples are too few to split. Premium (would pay more) and sport interest are traits shown inside every persona, not personas. The number of personas is not fixed: each is labelled validated, partly supported or still to validate.",
+  skip:/^(V_Golf|V_Sports|V_Marina)/,skipNote:"the golf, sports and marina rankings, which define the family sport group",
+  groups:[{k:"Family, sport",rule:"Travelled with family, and golf, sports or marina is in their top 3 of what mattered most",test:function(r){return P(r).travelled_with_last_visit==="Family"&&actInt(r);},
+    recruit:"Interview 10 or more families where someone plays golf, padel, tennis or sails (include golf families)."},
+   {k:"Family, young adults",rule:"Travelled with family, no sport interest, aged 18 to 24",test:function(r){return P(r).travelled_with_last_visit==="Family"&&!actInt(r)&&AGEP(P(r).age)==="18 to 24";},
+    recruit:"Ask 3 to 5 who pays and decides the trip, to confirm they are the beneficiaries."},
+   {k:"Family, adults",rule:"Travelled with family, no sport interest, aged 25 or over",test:function(r){return P(r).travelled_with_last_visit==="Family"&&!actInt(r)&&!!P(r).age&&AGEP(P(r).age)!=="18 to 24";},
+    recruit:"Interview 10 more parents, half with children under 12."},
+   {k:"Friends",rule:"Travelled with friends or a club",test:function(r){var w=P(r).travelled_with_last_visit;return w==="With friends"||w==="With a club or similar";},
+    recruit:"Add 5 groups of friends aged 25 or over, to see if the pattern holds for adults."},
+   {k:"Couple",rule:"Travelled as a couple",test:function(r){return P(r).travelled_with_last_visit==="As a couple";},
+    recruit:"Interview 10 to 15 couples aged 25 or over."}]},
  {k:"tier",name:"Price and programme tier",
   desc:"Formed from what people would pay and how broad a programme they want. Clustering of these answers found three stable groups; the simple rules below reproduce them with about 90% accuracy and cover everyone.",
   skip:/^(wtp_|prog|geo|cross)/,skipNote:"the price and programme answers, which define the groups",
@@ -511,7 +514,7 @@ function personasView(v){
     up.sort(function(a,b){return b.z-a.z;});dn.sort(function(a,b){return b.z-a.z;});
     function li(arr){return arr.slice(0,3).map(function(x){return '<li>'+esc(x.l)+' <small>'+x.a.toFixed(2)+' vs '+x.b.toFixed(2)+(x.q<0.05?' · solid':'')+'</small></li>';}).join("");}
     h+='<p class="pt">Stands out (versus the other groups)</p>'+((up.length||dn.length)?'<ul class="pn">'+(up.length?'<li><b>Higher</b></li>'+li(up):'')+(dn.length?'<li><b>Lower</b></li>'+li(dn):'')+'</ul>':'<p class="ps">Nothing clear yet.</p>');
-    h+='<p class="pt">Who they are</p><p class="ps">Age: '+persShare(rs,function(r){return P(r).age;},3)+'<br>Travelled with: '+persShare(rs,function(r){return P(r).travelled_with_last_visit;},3)+'<br>Visits: '+persShare(rs,function(r){return P(r).frequency;},2)+'<br>Entry point: '+persShare(rs,function(r){var e=P(r).entry_point;return e==="other"?"Something else":e;},3)+'</p>';
+    h+='<p class="pt">Who they are</p><p class="ps">Age: '+persShare(rs,function(r){return P(r).age;},3)+'<br>Travelled with: '+persShare(rs,function(r){return P(r).travelled_with_last_visit;},3)+'<br>Visits: '+persShare(rs,function(r){return P(r).frequency;},2)+'<br>Entry point: '+persShare(rs,function(r){var e=P(r).entry_point;return e==="other"?"Something else":e;},3)+'<br><b>Traits:</b> would pay premium (hotel in January €111 to €150 or more) <b>'+pct(rs.filter(function(r){return jan(r)>=2;}).length,n)+'%</b> · sport, golf or marina in top 3 <b>'+pct(rs.filter(actInt).length,n)+'%</b></p>';
     h+=persList("What mattered most (average points)",persPts(rs,function(r){return P(r).vertical_rank;}));
     h+=persList("Mechanisms",persPts(rs,function(r){return P(r).mechanism_rank;}));
     h+=persList("Benefits",persPts(rs,function(r){return P(r).benefit_rank;}));
