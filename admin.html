@@ -90,6 +90,16 @@ details[open]>summary::before{content:"\25BE"}
 .pn{margin:0;padding-left:18px;font-size:.84rem;line-height:1.55}
 .stl p{margin:4px 0;font-size:.88rem}.stl{margin:6px 0 10px}
 .hyp{text-transform:none;letter-spacing:0;font-weight:500;font-style:italic}
+
+.cc .cct{width:100%;border:0;border-bottom:1px dashed var(--line);font:700 .95rem inherit;padding:2px 0;margin-bottom:8px;background:none;color:inherit}
+.cctb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0;font-size:.78rem}
+.cctb select{font-size:.78rem;padding:3px 6px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.ccv{overflow:auto;background:repeating-conic-gradient(#f4f4f5 0% 25%,#fff 0% 50%) 50%/16px 16px;border-radius:8px}
+.ccv svg{max-width:100%;height:auto;display:block}
+.ccg{grid-template-columns:repeat(auto-fit,minmax(min(100%,620px),1fr))}
+table.cmp th{text-align:left;vertical-align:top;font-size:.78rem}
+table.cmp td{vertical-align:top;font-size:.8rem;min-width:150px}
+table.cmp tr.sec th{background:#EFEFF1;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
 </style>
 </head>
 <body>
@@ -158,7 +168,7 @@ sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_IN"&&!ST.user)boot();});
 function shell(){
   app.innerHTML='<header class="top"><div class="wrap"><div class="bar"><h1>Customer Survey<small>Private team area</small></h1>'+
    '<button class="btn pri sm" id="clink">Copy questionnaire link</button><a class="btn sm" id="tst" href="'+esc(formUrl()+'?test=1')+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Test survey (nothing is saved)</a><button class="btn sm" id="out">Sign out</button></div>'+
-   '<nav class="tabs"><button data-t="overview">Overview</button><button data-t="segments">Segments</button><button data-t="personas">Personas</button><button data-t="responses">Responses</button><button data-t="method">Methodology</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
+   '<nav class="tabs"><button data-t="overview">Overview</button><button data-t="steering">Steering charts</button><button data-t="segments">Segments</button><button data-t="personas">Personas</button><button data-t="responses">Responses</button><button data-t="method">Methodology</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
   qs("#clink").onclick=function(){copyText(formUrl(),this);};
   qs("#out").onclick=function(){sb.auth.signOut().then(function(){ST.user=null;ST.loaded=false;loginView();});};
   Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.onclick=function(){ST.tab=b.getAttribute("data-t");paint();};});
@@ -170,7 +180,7 @@ function paint(){
   if(ST.err){v.innerHTML='<p class="msg bad">'+esc(ST.err)+'</p>';return;}
   if(ST.tab==="method"){methodView(v);return;}
   if(!ST.loaded){v.innerHTML='<p class="msg">A carregar...</p>';return;}
-  if(ST.tab==="responses")responsesView(v);else if(ST.tab==="segments")segmentsView(v);else if(ST.tab==="personas")personasView(v);else overviewView(v);
+  if(ST.tab==="responses")responsesView(v);else if(ST.tab==="segments")segmentsView(v);else if(ST.tab==="personas")personasView(v);else if(ST.tab==="steering")steeringView(v);else overviewView(v);
 }
 
 /* ---------- dados ---------- */
@@ -500,6 +510,7 @@ function personasView(v){
   function pb(o){return '<button class="btn sm'+(o.k===opt.k?' pri':'')+'" data-po="'+o.k+'">'+esc(o.name)+'</button>';}
   var h='<h2>Personas</h2><div class="filters" style="gap:6px">'+pb(POPTS[0])+'<span class="tag" style="margin-left:10px">Old personas (other ways to cut the same data):</span>'+POPTS.slice(1).map(pb).join("")+'</div>';
   if(opt.k==="best"){
+    h+=compareCard(opt,rowsBy,stat);
     var TG=30,unr=all.filter(function(r,j){return asg[j]<0;}),tot={n:0,o:0,m:0};
     h+='<div class="card" style="margin-bottom:14px"><h3>How many answers fit each persona</h3><p class="note">Every complete response counts once, wherever it came from: people who named a place outside our five also count if they fit. Target = '+TG+' people per persona, the minimum to tell a medium-sized difference from chance. “To collect” is how many interviews are still missing to reach it.</p><div class="tablewrap"><table><thead><tr><th>Persona</th><th>In the survey</th><th>Of which other places</th><th>Target</th><th>To collect</th><th>Status</th></tr></thead><tbody>';
     opt.groups.forEach(function(g,gi){var rs=rowsBy[gi],o=rs.filter(function(r){return placeOf(r)===OTHER;}).length,miss=Math.max(0,TG-rs.length);tot.n+=rs.length;tot.o+=o;tot.m+=miss;
@@ -566,6 +577,190 @@ function persWtp(rows){
   return h+'</tbody></table>';
 }
 function persIdx(rows){var v=[];rows.forEach(function(r){WTPQ.forEach(function(q){var i=q.lab.indexOf(P(r)[q.f]);if(i>-1)v.push(i);});});return v.length?v.reduce(function(a,b){return a+b;},0)/v.length:null;}
+/* ---------- steering: gráficos exportáveis ---------- */
+var PAL={gold:["#AE8C44","#404041","#8A8A8C","#D9C79E","#5E5E5E","#C9B27A","#2E2E2E","#EFE3C8","#7A6230","#B8B8BA"],
+ grey:["#2E2E2E","#5E5E5E","#8A8A8C","#B8B8BA","#D9D9DB","#404041","#707070","#9A9A9C","#C8C8CA","#E5E5E7"],
+ mono:["#AE8C44","#C4A765","#D6C08A","#E6D6B0","#F3EBDA","#8D7036","#75592A","#BBA062","#CDB87F","#DFD0A8"]};
+var CF="Aptos, Calibri, Arial, sans-serif";
+function resShort(r){var s=String(P(r).residence||"");if(!s)return null;if(/^I have Portuguese nationality and live in/.test(s))return "Portuguese, lives in Portugal";if(/^I have Portuguese nationality/.test(s))return "Portuguese, lives abroad";return "Not Portuguese, lives abroad";}
+function wtpVar(i){var q=WTPQ[i];return {get:function(r){var v=P(r)[q.f];return q.lab.indexOf(v)<0?null:v;},order:q.lab};}
+var VARS={
+ persona:{label:"Persona (main 5)",get:function(r,c){return c.pm[r.session_id]||null;}},
+ dest:{label:"Destination",get:function(r){return placeOf(r);},order:PLACES.concat([OTHER])},
+ age:{label:"Age",get:function(r){return P(r).age||null;},order:AGE},
+ gender:{label:"Gender",get:function(r){return P(r).gender||null;},order:GENDER},
+ res:{label:"Residence",get:resShort,order:["Portuguese, lives in Portugal","Portuguese, lives abroad","Not Portuguese, lives abroad"]},
+ comp:{label:"Travelled with",get:function(r){return P(r).travelled_with_last_visit||null;}},
+ entry:{label:"Entry point",get:function(r){return entryP(r)||null;}},
+ season:{label:"Season of last visit",get:function(r){return P(r).season_last_visit||null;},order:SEASONS},
+ freq:{label:"Visits in the last years",get:function(r){return P(r).frequency||null;},order:FREQ},
+ nights:{label:"Nights",get:function(r){return P(r).nights_last_visit||null;},order:NIGHTS},
+ prem:{label:"Spending (Premium = hotel in January €111+)",get:function(r){var i=jan(r);return i<0?null:(i>=2?"Premium":"Mainstream");},order:["Premium","Mainstream"]},
+ jan:{label:"Hotel in January, would pay",get:wtpVar(0).get,order:WTPQ[0].lab},
+ aug:{label:"Hotel in August, would pay",get:wtpVar(1).get,order:WTPQ[1].lab},
+ din:{label:"Dinner per person, would pay",get:wtpVar(2).get,order:WTPQ[2].lab},
+ prog:{label:"Programme type",get:function(r){return P(r).program_type||null;},order:["Free, basic benefits","Free, with an upgrade","Paid, more and better benefits"]},
+ fee:{label:"Annual fee",get:function(r){return P(r).fee_band||null;}},
+ geo:{label:"Programme reach",get:function(r){return P(r).geo_reach||null;},order:["Local","Regional","All of Portugal"]},
+ cross:{label:"Activities covered",get:function(r){return P(r).cross_use||null;},order:["One activity only","Mostly one activity","Several activities"]}};
+function orderedKeys(v,rows,c){var m={};rows.forEach(function(r){var x=v.get(r,c);if(x!=null&&x!=="")m[x]=(m[x]||0)+1;});var k=Object.keys(m);
+  if(v.order){k=k.sort(function(a,b){var ia=v.order.indexOf(a),ib=v.order.indexOf(b);if(ia<0)ia=99;if(ib<0)ib=99;return ia-ib||m[b]-m[a];});}else k.sort(function(a,b){return m[b]-m[a]||(a<b?-1:1);});return k;}
+function crossData(rows,kx,ky,c){var vx=VARS[kx],vy=ky&&ky!=="none"?VARS[ky]:null,cats=orderedKeys(vx,rows,c),sers=vy?orderedKeys(vy,rows,c):["All answers"];
+  var cnt=sers.map(function(){return cats.map(function(){return 0;});}),n=0;
+  rows.forEach(function(r){var a=vx.get(r,c);if(a==null||a==="")return;var ci=cats.indexOf(a),si=0;if(vy){var b=vy.get(r,c);if(b==null||b==="")return;si=sers.indexOf(b);}cnt[si][ci]++;n++;});
+  return {cats:cats,sers:sers.map(function(s,i){return {name:s,vals:cnt[i]};}),unit:"share",n:n,xl:vx.label,yl:vy?vy.label:""};}
+function scoreData(rows,field,c,byPersona){var items={};rows.forEach(function(r){cleanRank(P(r)[field]).forEach(function(x){items[x]=1;});});
+  var cats=Object.keys(items),groups=byPersona?POPTS[0].groups.map(function(g){return g.k;}):["All answers"];
+  var sers=groups.map(function(g){var rs=byPersona?rows.filter(function(r){return c.pm[r.session_id]===g;}):rows;
+    return {name:g,vals:cats.map(function(it){var v=rs.map(function(r){return rkScore(P(r)[field],it);}).filter(function(z){return z!=null;});return v.length?Math.round(mean(v)*100):0;}),n:rs.length};});
+  cats.sort(function(a,b){var s=function(x){return sers.reduce(function(t,q){return t+q.vals[cats.indexOf(x)];},0);};return s(b)-s(a);});
+  sers=sers.map(function(q){return {name:q.name,vals:cats.map(function(it){return q.vals[Object.keys(items).indexOf(it)];})};});
+  return {cats:cats,sers:sers,unit:"score",n:rows.length,xl:"",yl:""};}
+var SPECS=[];
+function addS(sec,id,title,note,build,type){SPECS.push({sec:sec,id:id,title:title,note:note||"",build:build,type:type||"bar"});}
+function single(k){return function(rows,c){return crossData(rows,k,"none",c);};}
+function cr(a,b){return function(rows,c){return crossData(rows,a,b,c);};}
+(function(){
+ var S1="1. Who answered",S2="2. Willingness to pay",S3="3. Relations: places, companions, premium",S4="4. What matters: verticals, mechanisms, benefits",S5="5. Programme they would build";
+ [["age","Respondents by age"],["gender","Respondents by gender"],["res","Respondents by residence"],["comp","Who they travelled with"],["dest","Destination of the last visit"],["entry","What brings them (entry point)"],["season","Season of the last visit"],["freq","How many times they visited"],["nights","Nights of the last visit"]].forEach(function(x){addS(S1,"d_"+x[0],x[1],"Share of respondents.",single(x[0]));});
+ addS(S1,"d_pers","Respondents by persona","Each response is in one persona or in none.",single("persona"));
+ [["jan","Hotel in January: what they would pay per night"],["aug","Hotel in August: what they would pay per night"],["din","Dinner per person, drinks included"]].forEach(function(x){addS(S2,"w_"+x[0],x[1],"Share of respondents.",single(x[0]));});
+ addS(S2,"w_jan_dest","Hotel in January by destination","Share inside each destination.",cr("dest","jan"),"stack");
+ addS(S2,"w_jan_pers","Hotel in January by persona","Share inside each persona.",cr("persona","jan"),"stack");
+ addS(S2,"w_aug_pers","Hotel in August by persona","Share inside each persona.",cr("persona","aug"),"stack");
+ addS(S2,"w_din_pers","Dinner by persona","Share inside each persona.",cr("persona","din"),"stack");
+ addS(S2,"w_prem_dest","Premium share by destination","Premium = would pay €111 or more for a hotel night in January.",cr("dest","prem"),"stack");
+ addS(S2,"w_prem_comp","Premium share by who they travelled with","",cr("comp","prem"),"stack");
+ addS(S2,"w_prem_age","Premium share by age","",cr("age","prem"),"stack");
+ addS(S3,"r_entry_dest","Entry point by destination","Share inside each destination.",cr("dest","entry"),"stack");
+ addS(S3,"r_comp_dest","Who they travelled with, by destination","Share inside each destination.",cr("dest","comp"),"stack");
+ addS(S3,"r_age_dest","Age by destination","Share inside each destination.",cr("dest","age"),"stack");
+ addS(S3,"r_season_dest","Season by destination","Share inside each destination.",cr("dest","season"),"stack");
+ addS(S3,"r_entry_comp","Entry point by who they travelled with","Share inside each companion group.",cr("comp","entry"),"stack");
+ addS(S3,"r_prem_entry","Premium share by entry point","",cr("entry","prem"),"stack");
+ addS(S3,"r_pers_dest","Persona by destination","Share inside each destination.",cr("dest","persona"),"stack");
+ addS(S4,"k_vert","What mattered most: rank score","100 = always ranked first, 0 = always last.",function(rows,c){return scoreData(rows,"vertical_rank",c,false);});
+ addS(S4,"k_vert_p","What mattered most, by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"vertical_rank",c,true);},"column");
+ addS(S4,"k_mech","Mechanisms: rank score","100 = always ranked first, 0 = always last.",function(rows,c){return scoreData(rows,"mechanism_rank",c,false);});
+ addS(S4,"k_mech_p","Mechanisms by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"mechanism_rank",c,true);},"column");
+ addS(S4,"k_ben","Benefits: rank score","100 = always ranked first, 0 = always last.",function(rows,c){return scoreData(rows,"benefit_rank",c,false);});
+ addS(S4,"k_ben_p","Benefits by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"benefit_rank",c,true);},"column");
+ [["prog","Programme type they would build"],["fee","Annual fee they would accept"],["geo","Reach of the programme"],["cross","Activities the programme covers"]].forEach(function(x){addS(S5,"p_"+x[0],x[1],"Share of respondents.",single(x[0]));});
+ addS(S5,"p_prog_pers","Programme type by persona","Share inside each persona.",cr("persona","prog"),"stack");
+ addS(S5,"p_prog_prem","Programme type, Premium against Mainstream","",cr("prem","prog"),"stack");
+ addS(S5,"p_geo_dest","Reach by destination","Share inside each destination.",cr("dest","geo"),"stack");
+})();
+function chartVals(d,o){var cat=d.cats.length,out=d.sers.map(function(s){return s.vals.slice();});
+  if(d.unit==="share"&&o.mode==="pct"){
+    if(d.sers.length>1){for(var j=0;j<cat;j++){var t=0;d.sers.forEach(function(s){t+=s.vals[j];});d.sers.forEach(function(s,i){out[i][j]=t?s.vals[j]/t*100:0;});}}
+    else{var t2=d.sers[0].vals.reduce(function(a,b){return a+b;},0);out[0]=d.sers[0].vals.map(function(v){return t2?v/t2*100:0;});}}
+  return out;}
+function trunc(s,n){s=String(s);return s.length>n?s.slice(0,n-1)+"…":s;}
+function svgEsc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function wrap2(s,n){s=String(s);if(s.length<=n)return [s];var w=s.split(" "),a="",b="";w.forEach(function(x){if((a+" "+x).trim().length<=n&&!b)a=(a+" "+x).trim();else b=(b+" "+x).trim();});return [a,trunc(b,n)];}
+function renderChart(d,o,title){
+  var pal=PAL[o.pal]||PAL.gold,W=o.size==="half"?560:1000,type=o.type,fs=o.size==="half"?11:13;
+  var cats=d.cats.map(function(x,i){return i;}),V=chartVals(d,o);
+  if(o.sort==="desc"&&type!=="donut"){var tot=function(j){return V.reduce(function(a,s){return a+s[j];},0);};cats.sort(function(a,b){return tot(b)-tot(a);});}
+  var fmt=function(v){return o.mode==="pct"&&d.unit==="share"?Math.round(v)+"%":(d.unit==="score"?String(Math.round(v)):String(Math.round(v)));};
+  var multi=d.sers.length>1,g=[],H,titleH=o.showTitle?40:0,top=titleH+8;
+  var txt=function(x,y,s,a,w,c,sz){return '<text x="'+x+'" y="'+y+'" font-family="'+CF+'" font-size="'+(sz||fs)+'" fill="'+(c||"#404041")+'" text-anchor="'+(a||"start")+'"'+(w?' font-weight="'+w+'"':'')+'>'+svgEsc(s)+'</text>';};
+  var legendH=0,leg="";
+  function legend(y,items){var x=0,yy=y,out="";items.forEach(function(it){var w=it.n.length*fs*0.58+30;if(x+w>W-20&&x>0){x=0;yy+=fs+10;}out+='<rect x="'+(20+x)+'" y="'+(yy-fs+2)+'" width="'+(fs-2)+'" height="'+(fs-2)+'" fill="'+it.c+'"/>'+txt(20+x+fs+4,yy,it.n,"start");x+=w;});return {h:yy-y+fs+10,s:out};}
+  if(type==="donut"){
+    var sl=d.cats.map(function(c2,j){return {n:c2,v:V.reduce(function(a,s){return a+s[j];},0)};}),T=sl.reduce(function(a,b){return a+b.v;},0)||1,R=o.size==="half"?120:150,cx=W/2,cy=top+R+10,a0=-Math.PI/2;
+    sl.forEach(function(s,i){if(!s.v)return;var a1=a0+s.v/T*Math.PI*2,lg=a1-a0>Math.PI?1:0,x0=cx+R*Math.cos(a0),y0=cy+R*Math.sin(a0),x1=cx+R*Math.cos(a1),y1=cy+R*Math.sin(a1),r2=R*0.58,x2=cx+r2*Math.cos(a1),y2=cy+r2*Math.sin(a1),x3=cx+r2*Math.cos(a0),y3=cy+r2*Math.sin(a0);
+      g.push('<path d="M'+x0+" "+y0+" A"+R+" "+R+" 0 "+lg+" 1 "+x1+" "+y1+" L"+x2+" "+y2+" A"+r2+" "+r2+" 0 "+lg+" 0 "+x3+" "+y3+' Z" fill="'+pal[i%pal.length]+'" stroke="#fff" stroke-width="1.5"/>');
+      if(o.labels&&s.v/T>0.05){var am=(a0+a1)/2,rm=(R+r2)/2;g.push(txt(cx+rm*Math.cos(am),cy+rm*Math.sin(am)+4,Math.round(s.v/T*100)+"%","middle","700",(i%pal.length===0||i%pal.length===1||i%pal.length===5?"#fff":"#404041")));}a0=a1;});
+    var lg2=legend(cy+R+30,sl.map(function(s,i){return {n:s.n+" ("+Math.round(s.v/T*100)+"%)",c:pal[i%pal.length]};}));H=cy+R+30+lg2.h+6;g.push(lg2.s);
+  }else if(type==="column"){
+    var pl=50,pr=20,pb=70,ph=o.size==="half"?260:320,iw=W-pl-pr,n=cats.length,gw=iw/n,bw=Math.min(46,(gw*0.78)/(multi?d.sers.length:1)),mx=0;
+    if(d.unit==="share"&&o.mode==="pct"&&multi&&type==="stack")mx=100;V.forEach(function(s){s.forEach(function(v){if(v>mx)mx=v;});});mx=mx||1;
+    cats.forEach(function(j,k){var gx=pl+k*gw+gw/2,x0=gx-bw*d.sers.length/2;d.sers.forEach(function(s,i){var h=V[i][j]/mx*ph,x=x0+i*bw,y=top+ph-h;g.push('<rect x="'+x+'" y="'+y+'" width="'+(bw-2)+'" height="'+h+'" fill="'+pal[i%pal.length]+'"/>');if(o.labels&&V[i][j]>0)g.push(txt(x+(bw-2)/2,y-4,fmt(V[i][j]),"middle","600","#404041",fs-1));});
+      var L=wrap2(d.cats[j],Math.max(8,Math.floor(gw/(fs*0.55))));L.forEach(function(l,q){g.push(txt(gx,top+ph+18+q*(fs+2),l,"middle"));});});
+    g.push('<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+(top+ph)+'" y2="'+(top+ph)+'" stroke="#8A8A8C" stroke-width="1"/>');
+    var lg3={h:0,s:""};if(multi){lg3=legend(top+ph+pb,d.sers.map(function(s,i){return {n:s.name,c:pal[i%pal.length]};}));g.push(lg3.s);}H=top+ph+pb+(multi?lg3.h:0)+4;
+  }else{
+    var lw=0;d.cats.forEach(function(x){lw=Math.max(lw,Math.min(30,x.length));});lw=Math.min(260,lw*fs*0.56+14);var pr2=44,iw2=W-lw-pr2-20,rh=multi&&type==="bar"?d.sers.length*(fs+5)+14:fs+22,mx2=0;
+    if(type==="stack"){V.forEach(function(s,i){});cats.forEach(function(j){var t=V.reduce(function(a,s){return a+s[j];},0);if(t>mx2)mx2=t;});}else V.forEach(function(s){s.forEach(function(v){if(v>mx2)mx2=v;});});mx2=mx2||1;
+    cats.forEach(function(j,k){var y=top+k*rh;g.push(txt(20+lw-8,y+rh/2+4,trunc(d.cats[j],30),"end"));
+      if(type==="stack"){var x=20+lw;d.sers.forEach(function(s,i){var w=V[i][j]/mx2*iw2;if(w<=0)return;g.push('<rect x="'+x+'" y="'+(y+6)+'" width="'+w+'" height="'+(rh-12)+'" fill="'+pal[i%pal.length]+'" stroke="#fff" stroke-width="0.8"/>');if(o.labels&&w>26)g.push(txt(x+w/2,y+rh/2+4,fmt(V[i][j]),"middle","600",(i%pal.length<2||i%pal.length===5?"#fff":"#404041"),fs-1));x+=w;});}
+      else{var bh=multi?fs+3:rh-12;d.sers.forEach(function(s,i){var w=V[i][j]/mx2*iw2,yy=y+6+(multi?i*(bh+2):0);g.push('<rect x="'+(20+lw)+'" y="'+yy+'" width="'+Math.max(0,w)+'" height="'+bh+'" fill="'+pal[i%pal.length]+'"/>');if(o.labels)g.push(txt(20+lw+w+5,yy+bh/2+4,fmt(V[i][j]),"start","600","#404041",fs-1));});}});
+    var by=top+cats.length*rh+6;g.push('<line x1="'+(20+lw)+'" x2="'+(20+lw)+'" y1="'+top+'" y2="'+(by-6)+'" stroke="#8A8A8C"/>');
+    var lg4={h:0,s:""};if(multi){lg4=legend(by+16,d.sers.map(function(s,i){return {n:s.name,c:pal[i%pal.length]};}));g.push(lg4.s);}H=by+(multi?lg4.h+16:0)+4;
+  }
+  var head=o.showTitle?txt(20,26,title,"start","700","#404041",fs+5):"";
+  var note='';
+  return {svg:'<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+(o.bg?'<rect width="100%" height="100%" fill="'+o.bg+'"/>':"")+head+g.join("")+'</svg>',w:W,h:H};}
+function chartState(id,spec){ST.cs=ST.cs||{};var s=ST.cs[id];if(!s){s=ST.cs[id]={type:spec.type,mode:"pct",labels:true,pal:"gold",size:"full",sort:"none",title:spec.title,showTitle:false};}return s;}
+function chartCtx(){var all=complete(),asg=assignOpt(POPTS[0],all),pm={};all.forEach(function(r,j){pm[r.session_id]=asg[j]>-1?POPTS[0].groups[asg[j]].k:null;});
+  var f=ST.sf||(ST.sf={place:"all",pers:"all"}),rows=all.filter(function(r){return (f.place==="all"||placeOf(r)===f.place)&&(f.pers==="all"||pm[r.session_id]===f.pers);});return {rows:rows,pm:pm,c:{pm:pm}};}
+function chartData(spec,cx){return spec.build(cx.rows,cx.c);}
+function csvOf(d,o){var V=chartVals(d,o),lines=[["",].concat(d.sers.map(function(s){return s.name;}))];d.cats.forEach(function(c2,j){lines.push([c2].concat(V.map(function(s){return Math.round(s[j]*10)/10;})));});
+  return "﻿"+lines.map(function(l){return l.map(function(x){x=String(x);return /[;",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x;}).join(",");}).join("\r\n");}
+function dlBlob(b,name){var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(a.href);},2000);}
+function fname(t){return String(t).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,60)||"chart";}
+function svgToPng(svg,w,h,bg,name){var img=new Image();img.onload=function(){var c=document.createElement("canvas");c.width=w*2;c.height=h*2;var x=c.getContext("2d");if(bg){x.fillStyle=bg;x.fillRect(0,0,c.width,c.height);}x.drawImage(img,0,0,c.width,c.height);c.toBlob(function(b){dlBlob(b,name);});};img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);}
+function chartCard(spec,isCustom){var s=chartState(spec.id,spec);
+  var sel=function(k,opts){return '<select data-k="'+k+'">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(s[k])===String(o[0])?' selected':'')+'>'+o[1]+'</option>';}).join("")+'</select>';};
+  return '<div class="card cc" data-cid="'+spec.id+'"><div class="cch"><input class="cct" data-k="title" value="'+esc(s.title)+'" aria-label="Chart title"></div>'+
+   '<div class="cctb">'+sel("type",[["bar","Bars"],["column","Columns"],["stack","Stacked bars"],["donut","Donut"]])+sel("mode",[["pct","Share %"],["n","Count"]])+sel("sort",[["none","Order as asked"],["desc","High to low"]])+sel("pal",[["gold","Steering gold"],["grey","Greys"],["mono","Gold tones"]])+sel("size",[["full","Full slide"],["half","Half slide"]])+
+   '<label><input type="checkbox" data-k="labels"'+(s.labels?' checked':'')+'> Labels</label><label><input type="checkbox" data-k="showTitle"'+(s.showTitle?' checked':'')+'> Title in image</label></div>'+
+   '<div class="ccv"></div><p class="note ccn">'+esc(spec.note)+'</p><div class="cctb"><button class="btn sm" data-dl="png">PNG transparent</button><button class="btn sm" data-dl="pngw">PNG white</button><button class="btn sm" data-dl="svg">SVG</button><button class="btn sm" data-dl="csv">CSV</button></div></div>';}
+function drawChart(card){var id=card.getAttribute("data-cid"),spec=id==="custom"?ST.customSpec():SPECS.filter(function(x){return x.id===id;})[0],s=ST.cs[id],cx=ST.cx,d=chartData(spec,cx),
+  r=renderChart(d,Object.assign({},s,{bg:null}),s.title);card.querySelector(".ccv").innerHTML=r.svg;card.querySelector(".ccn").textContent=(spec.note?spec.note+" ":"")+"n = "+d.n+".";}
+function bindChart(card){var id=card.getAttribute("data-cid");
+  Array.prototype.forEach.call(card.querySelectorAll("[data-k]"),function(el){var ev=el.type==="checkbox"?"onchange":(el.tagName==="INPUT"?"oninput":"onchange");el[ev]=function(){ST.cs[id][el.getAttribute("data-k")]=el.type==="checkbox"?el.checked:el.value;drawChart(card);};});
+  Array.prototype.forEach.call(card.querySelectorAll("[data-dl]"),function(b){b.onclick=function(){var spec=id==="custom"?ST.customSpec():SPECS.filter(function(x){return x.id===id;})[0],s=ST.cs[id],d=chartData(spec,ST.cx),k=b.getAttribute("data-dl"),nm=fname(s.title);
+    if(k==="csv"){dlBlob(new Blob([csvOf(d,s)],{type:"text/csv;charset=utf-8"}),nm+".csv");return;}
+    var r=renderChart(d,Object.assign({},s,{bg:k==="pngw"?"#ffffff":null}),s.title);
+    if(k==="svg")dlBlob(new Blob([r.svg],{type:"image/svg+xml"}),nm+".svg");else svgToPng(r.svg,r.w,r.h,k==="pngw"?"#ffffff":null,nm+(k==="pngw"?"-white":"")+".png");};});}
+function steeringView(v){
+  var cx=ST.cx=chartCtx(),f=ST.sf;ST.customSpec=function(){var cs=ST.cust||(ST.cust={x:"dest",y:"entry"});return {id:"custom",title:"Custom: "+VARS[cs.x].label+" by "+(cs.y==="none"?"nothing":VARS[cs.y].label),note:"Share inside each row group.",type:"stack",build:function(rows,c){return crossData(rows,cs.x,cs.y,c);}};};
+  var secs=[];SPECS.forEach(function(s){if(secs.indexOf(s.sec)<0)secs.push(s.sec);});
+  var vopts=function(sel,none){return (none?'<option value="none"'+(sel==="none"?' selected':'')+'>Nothing (just the totals)</option>':'')+Object.keys(VARS).map(function(k){return '<option value="'+k+'"'+(sel===k?' selected':'')+'>'+esc(VARS[k].label)+'</option>';}).join("");};
+  var cs=ST.cust||(ST.cust={x:"dest",y:"entry"});
+  var h='<h2>Steering charts</h2><p class="note">Each chart can be changed (type, share or count, order, colours, size) and downloaded as a PNG with a transparent background, a white PNG, SVG or CSV. Style follows Steering 1: gold, dark grey, Aptos. The filters below apply to every chart.</p>'+
+   '<div class="filters"><label>Destination <select id="sf-p"><option value="all">All</option>'+PLACES.concat([OTHER]).map(function(p){return '<option value="'+esc(p)+'"'+(f.place===p?' selected':'')+'>'+esc(p)+'</option>';}).join("")+'</select></label><label>Persona <select id="sf-s"><option value="all">All</option>'+POPTS[0].groups.map(function(g){return '<option value="'+esc(g.k)+'"'+(f.pers===g.k?' selected':'')+'>'+esc(g.k)+'</option>';}).join("")+'</select></label><span class="tag">'+cx.rows.length+' responses</span></div>'+
+   '<h2>Build your own</h2><div class="filters"><label>Rows <select id="cu-x">'+vopts(cs.x,false)+'</select></label><label>Split by <select id="cu-y">'+vopts(cs.y,true)+'</select></label></div><div class="grid ccg" id="cu-g">'+chartCard(ST.customSpec(),true)+'</div>';
+  secs.forEach(function(sec){h+='<h2>'+esc(sec)+'</h2><div class="grid ccg">'+SPECS.filter(function(s){return s.sec===sec;}).map(function(s){return chartCard(s);}).join("")+'</div>';});
+  v.innerHTML=h;
+  Array.prototype.forEach.call(v.querySelectorAll(".cc"),function(c){bindChart(c);drawChart(c);});
+  qs("#sf-p").onchange=function(){ST.sf.place=this.value;paint();};qs("#sf-s").onchange=function(){ST.sf.pers=this.value;paint();};
+  qs("#cu-x").onchange=function(){ST.cust.x=this.value;ST.cs.custom=null;paint();};qs("#cu-y").onchange=function(){ST.cust.y=this.value;ST.cs.custom=null;paint();};
+}
+function topPts(rs,field,k){return persPts(rs,function(r){return P(r)[field];}).slice(0,k||3).map(function(x,i){return (i+1)+'. '+esc(x[0]);}).join("<br>")||"-";}
+function wtpP(rs,q){var v=rs.map(function(r){return wtpPct(q,P(r)[q.f]);}).filter(function(x){return x!=null;});return v.length?Math.round(mean(v)):null;}
+function compareCard(opt,rowsBy,stat){
+  var G=opt.groups,rows=[];
+  function row(label,fn,hi){var cells=G.map(function(g,gi){return fn(rowsBy[gi],gi);}),best=null;
+    if(hi){var nums=cells.map(function(c){return typeof c==="object"&&c?c.v:null;}).filter(function(x){return x!=null;});best=nums.length?Math.max.apply(null,nums):null;}
+    return '<tr><th>'+esc(label)+'</th>'+cells.map(function(c){var isO=typeof c==="object"&&c;var t=isO?c.t:c,gold=isO&&best!=null&&c.v===best;return '<td'+(gold?' style="background:rgba(212,160,23,.35);font-weight:700"':'')+'>'+t+'</td>';}).join("")+'</tr>';}
+  var sh=function(get,k){return function(rs){return persShare(rs,get,k);};};
+  var pct1=function(f){return function(rs){var n=rs.filter(f).length;var v=rs.length?Math.round(n/rs.length*100):null;return {t:v==null?"-":v+"%",v:v};};};
+  var h='<div class="card" style="margin-bottom:14px"><h3>The 5 personas side by side</h3><p class="note">Gold marks the highest value in a row where a comparison makes sense. Click a persona below for the full card and the tests.</p><div class="tablewrap"><table class="cmp"><thead><tr><th></th>'+G.map(function(g,gi){return '<th style="border-top:4px solid '+stat[gi].c+'">'+esc(g.k)+'<br><small style="color:'+stat[gi].c+'">'+stat[gi].t+'</small></th>';}).join("")+'</tr></thead><tbody>';
+  h+=row("People in the survey",function(rs){return '<b>'+rs.length+'</b>';});
+  h+='<tr class="sec"><th colspan="'+(G.length+1)+'">Who they are</th></tr>';
+  h+=row("Age",sh(function(r){return P(r).age;},3));
+  h+=row("Places",sh(function(r){return placeOf(r);},3));
+  h+=row("Residence",sh(resShort,2));
+  h+=row("Entry point",sh(function(r){return entryP(r);},3));
+  h+=row("Season",sh(function(r){return P(r).season_last_visit;},2));
+  h+=row("Premium (hotel in January €111+)",pct1(function(r){return jan(r)>=2;}),true);
+  h+=row("Sport, golf or marina in top 3",pct1(actInt),true);
+  h+='<tr class="sec"><th colspan="'+(G.length+1)+'">What they value (top 3 by average rank)</th></tr>';
+  h+=row("Verticals",function(rs){return topPts(rs,"vertical_rank");});
+  h+=row("Mechanisms",function(rs){return topPts(rs,"mechanism_rank");});
+  h+=row("Benefits",function(rs){return topPts(rs,"benefit_rank");});
+  h+='<tr class="sec"><th colspan="'+(G.length+1)+'">What they would pay (position in the market, 50 = typical)</th></tr>';
+  WTPQ.forEach(function(q){h+=row(q.t.replace(", per night","").replace(" (double room, 2 adults, breakfast)",""),function(rs){var v=wtpP(rs,q);return {t:v==null?"-":"P"+v,v:v};},true);});
+  h+='<tr class="sec"><th colspan="'+(G.length+1)+'">Programme they would build</th></tr>';
+  h+=row("Type",sh(function(r){return P(r).program_type;},2));
+  h+=row("Annual fee",sh(function(r){return P(r).fee_band;},2));
+  h+=row("Activities",sh(function(r){return P(r).cross_use;},2));
+  h+=row("Reach",sh(function(r){return P(r).geo_reach;},2));
+  return h+'</tbody></table></div></div>';
+}
 function overviewView(v){
   DR=[];
   var all=complete(),rows=filtered(),T=rows.length;
