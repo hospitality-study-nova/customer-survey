@@ -197,7 +197,10 @@ function loadRows(){
   page(0);
 }
 function P(r){return r.payload||{};}
-function isScreened(r){return !!P(r).screened_out;}
+var MIN_SECONDS=180;
+function tooFast(r){var p=P(r);return !p.screened_out&&p.vertical_rank&&p.duration_s>0&&p.duration_s<MIN_SECONDS;}
+function isScreened(r){return !!P(r).screened_out||tooFast(r);}
+function exclReason(r){var p=P(r);return p.screened_out?(p.screened_out==="no_holiday"?"no holiday in the last 3 years":p.screened_out):(tooFast(r)?"answered in "+p.duration_s+" s, under the "+MIN_SECONDS+" s minimum":"");}
 function placeOf(r){var p=P(r);return p.in_target_place&&p.destination?p.destination:OTHER;}
 function complete(){return ST.rows.filter(function(r){return !isScreened(r);});}
 function filtered(){
@@ -772,7 +775,9 @@ function overviewView(v){
   var dur=all.map(function(r){return P(r).duration_s;}).filter(function(x){return x>0;}).sort(function(a,b){return a-b;});
   var med=dur.length?Math.round(dur[Math.floor(dur.length/2)]/60*10)/10:"n/a";
   var h='<h2>Responses</h2><div class="grid kpis">'+
-   kpi(all.length,"complete responses")+kpi(inT,"in the 6 destinations")+kpi(all.length-inT,"in other places")+kpi(screened,"excluded (no holiday)")+kpi(med,"minutes (median)")+'</div>';
+   kpi(all.length,"complete responses")+kpi(inT,"in the 6 destinations")+kpi(all.length-inT,"in other places")+kpi(screened,"excluded (see cleaning rules)")+kpi(med,"minutes (median)")+'</div>';
+  var nNo=ST.rows.filter(function(r){return P(r).screened_out;}).length,nFast=ST.rows.filter(tooFast).length;
+  h+='<div class="card"><h3 style="margin-top:0">Data cleaning</h3><p class="note">'+ST.rows.length+' responses received, '+all.length+' kept. Excluded: '+nNo+' with no holiday in the last 3 years, '+nFast+' answered in under '+MIN_SECONDS+' seconds (3 minutes). Long answers are kept. Excluded responses stay in the database and are only left out of the analysis. Details in Methodology, “Data cleaning”.</p></div>';
   h+='<h2>Target by destination</h2><div class="card">'+'<p class="note">Goal: '+QUOTA+' responses per destination.</p>';
   PLACES.forEach(function(p){var n=all.filter(function(r){return placeOf(r)===p;}).length;
     h+='<div class="row'+(n>=QUOTA?' ok':'')+'"><span class="l">'+esc(p)+'</span><span class="t"><i style="width:'+Math.min(100,pct(n,QUOTA))+'%"></i></span><span class="v">'+n+' / '+QUOTA+'</span></div>';});
@@ -833,17 +838,15 @@ function kpi(n,l){return '<div class="kpi"><b>'+esc(n)+'</b><span>'+esc(l)+'</sp
 function fmtDate(s){var d=new Date(s);return d.toLocaleDateString("en-GB")+" "+d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});}
 function responsesView(v){
   var rows=ST.rows.filter(function(r){return ST.filter==="all"||placeOf(r)===ST.filter;});
-  var h='<h2>Individual responses</h2><div class="filters"><select id="flt"><option value="all">All destinations</option>'+PLACES.concat([OTHER]).map(function(p){return '<option value="'+esc(p)+'"'+(ST.filter===p?' selected':'')+'>'+esc(p==OTHER?"Other places":p)+'</option>';}).join("")+'</select><span class="tag">'+rows.length+' records</span><span style="flex:1"></span><button class="btn sm" id="csv">Export CSV</button><button class="btn sm" id="imp">Import CSV</button><input type="file" id="impf" accept=".csv,text/csv" style="display:none"></div>';
+  var h='<h2>Individual responses</h2><div class="filters"><select id="flt"><option value="all">All destinations</option>'+PLACES.concat([OTHER]).map(function(p){return '<option value="'+esc(p)+'"'+(ST.filter===p?' selected':'')+'>'+esc(p==OTHER?"Other places":p)+'</option>';}).join("")+'</select><span class="tag">'+rows.length+' records</span><span style="flex:1"></span><button class="btn sm" id="csv">Export CSV</button></div>';
   h+='<div class="tablewrap"><table><thead><tr><th>Date</th><th>Place</th><th>Gender</th><th>Age</th><th>Language</th><th>Min.</th><th></th></tr></thead><tbody>';
   rows.forEach(function(r,i){var p=P(r);
-    h+='<tr class="click" data-i="'+i+'"><td>'+esc(fmtDate(r.created_at))+'</td><td>'+esc(p.in_target_place?p.destination:(p.other_destination||"Other"))+'</td><td>'+esc(p.gender||"")+'</td><td>'+esc(p.age||"")+'</td><td>'+esc((p.language||"").toUpperCase())+'</td><td>'+(p.duration_s?Math.round(p.duration_s/60*10)/10:"")+'</td><td>'+(isScreened(r)?'<span class="tag warn">excluded</span>':'')+(p.import_source?'<span class="tag">imported</span>':'')+'</td></tr>';});
+    h+='<tr class="click" data-i="'+i+'"><td>'+esc(fmtDate(r.created_at))+'</td><td>'+esc(p.in_target_place?p.destination:(p.other_destination||"Other"))+'</td><td>'+esc(p.gender||"")+'</td><td>'+esc(p.age||"")+'</td><td>'+esc((p.language||"").toUpperCase())+'</td><td>'+(p.duration_s?Math.round(p.duration_s/60*10)/10:"")+'</td><td>'+(isScreened(r)?'<span class="tag warn">excluded</span>':'')+'</td></tr>';});
   if(!rows.length)h+='<tr><td colspan="7" class="empty">No responses yet.</td></tr>';
   h+='</tbody></table></div>';
   v.innerHTML=h;
   qs("#flt").onchange=function(){ST.filter=this.value;paint();};
   qs("#csv").onclick=function(){exportCsv(rows);};
-  qs("#imp").onclick=function(){qs("#impf").click();};
-  qs("#impf").onchange=function(e){var f=e.target.files[0];e.target.value="";if(f)importCsv(f);};
   Array.prototype.forEach.call(v.querySelectorAll("tr.click"),function(tr){tr.onclick=function(){detail(rows[+tr.getAttribute("data-i")]);};});
 }
 function detail(r){
@@ -851,7 +854,7 @@ function detail(r){
   function ol(a){return a&&a.length?'<ol>'+a.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ol>':"";}
   function kv(k,val){return val==null||val===""||(Array.isArray(val)&&!val.length)?"":'<dt>'+esc(k)+'</dt><dd>'+val+'</dd>';}
   var h='<div class="modal" id="dm"><div class="sheet"><div style="display:flex;justify-content:space-between;gap:10px"><div><h3>'+esc(p.in_target_place?p.destination:(p.other_destination||"Other place"))+'</h3><span class="tag">'+esc(fmtDate(r.created_at))+'</span></div><button class="btn sm" id="dx">Close</button></div>'+
-   (isScreened(r)?'<p class="msg bad">Excluded: '+esc(p.screened_out)+'</p>':'')+
+   (isScreened(r)?'<p class="msg bad">Excluded: '+esc(exclReason(r))+'</p>':'')+
    '<dl class="kv">'+kv("Gender",esc(p.gender))+kv("Age",esc(p.age))+kv("Residence",esc(p.residence))+kv("Loyalty programmes",esc((p.loyalty_memberships||[]).join(", ")))+
    kv("Frequency",esc(p.frequency))+kv("Last visit",esc((p.season_last_visit?p.season_last_visit+", ":"")+(p.nights_last_visit||"")))+kv("Travelled with",esc(p.travelled_with_last_visit)+(p.family_group&&p.family_group.length?" ("+esc(p.family_group.join(", "))+")":""))+kv("Main reason",esc(p.entry_point)+(p.entry_point_other?": "+esc(p.entry_point_other):""))+
    kv("What mattered",ol(p.vertical_rank))+kv("Mechanisms",ol(p.mechanism_rank))+kv("Benefits",ol(p.benefit_rank))+
@@ -879,81 +882,6 @@ function exportCsv(rows){
     lines.push(cols.map(function(c){return cell(c in m?m[c]:p[c]);}).join(";"));});
   var blob=new Blob(["﻿"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
   var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="holiday-study-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();document.body.removeChild(a);
-}
-
-/* ---------- import CSV (same format as Export CSV) ---------- */
-function parseCsv(t){
-  t=t.replace(/^﻿/,"");
-  var first=t.split(/\r?\n/)[0],d=(first.split(";").length>=first.split(",").length)?";":",";
-  var rows=[],row=[],cur="",q=false,i;
-  for(i=0;i<t.length;i++){var ch=t[i];
-    if(q){if(ch==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}
-    else if(ch==='"')q=true;
-    else if(ch===d){row.push(cur);cur="";}
-    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t[i+1]==="\n")i++;row.push(cur);cur="";if(row.length>1||row[0]!=="")rows.push(row);row=[];}
-    else cur+=ch;}
-  if(cur!==""||row.length){row.push(cur);rows.push(row);}
-  return rows;
-}
-var UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-function csvToResponse(h,v,fname,who){
-  var o={},errs=[];h.forEach(function(c,i){o[c.trim()]=(v[i]==null?"":v[i]).trim();});
-  var sid=o.session_id;
-  if(!sid)sid=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():null;
-  if(!sid||!UUID_RE.test(sid))errs.push("session_id is not a valid UUID");
-  var p={};
-  Object.keys(o).forEach(function(k){
-    var x=o[k];if(x===""||k==="created_at"||k==="session_id"||/^built_/.test(k)||k==="is_synthetic"||k==="record_type")return;
-    if(k==="vertical_rank"||k==="mechanism_rank"||k==="benefit_rank"||k==="loyalty_memberships")p[k]=x.split(" > ");
-    else if(k==="family_group")p[k]=x.split(", ");
-    else if(k==="in_target_place")p[k]=/^(true|1|yes)$/i.test(x);
-    else if(k==="duration_s"){var n=Number(x);if(isNaN(n))errs.push("duration_s is not a number");else p[k]=n;}
-    else if(k==="presented_order"){try{p[k]=JSON.parse(x);}catch(e){}}
-    else p[k]=x;});
-  if(o.built_enter||o.built_earn||o.built_level_up||o.built_benefits)p.program_built={enter:o.built_enter||null,earn:o.built_earn||null,level_up:o.built_level_up||null,benefits:o.built_benefits?o.built_benefits.split(" > "):[]};
-  if(String(o.is_synthetic).toLowerCase()==="true")errs.push("marked is_synthetic: not importable");
-  if(/^SYN-/i.test(o.session_id))errs.push("synthetic id (SYN-): not importable");
-  if(/synthetic|amplif/i.test(o.record_type||""))errs.push("record_type says synthetic/amplified: not importable");
-  var ca=o.created_at?new Date(o.created_at):null;if(o.created_at&&isNaN(ca))errs.push("created_at is not a valid date");
-  p.import_source=fname;p.imported_at=new Date().toISOString();p.imported_by=who||"";
-  return {ok:!errs.length,errs:errs,sid:sid,created_at:(ca&&!isNaN(ca))?ca.toISOString():null,destination:o.destination||null,entry_point:o.entry_point||null,payload:p};
-}
-function importCsv(file){
-  var rd=new FileReader();
-  rd.onload=function(){
-    var tab=parseCsv(String(rd.result));
-    if(tab.length<2){window.alert("The file has no rows.");return;}
-    var h=tab[0].map(function(x){return x.trim();});
-    if(h.indexOf("destination")<0||h.indexOf("session_id")<0){window.alert("This does not look like an Export CSV file (needs the destination and session_id columns).");return;}
-    var have={};ST.rows.forEach(function(r){have[r.session_id]=1;});
-    var who=ST.user&&ST.user.email||"";
-    var recs=tab.slice(1).map(function(v){return csvToResponse(h,v,file.name,who);});
-    var seen={};recs.forEach(function(r){if(r.ok&&seen[r.sid]){r.ok=false;r.errs.push("duplicate session_id inside the file");}seen[r.sid]=1;});
-    var okR=recs.filter(function(r){return r.ok;}),news=okR.filter(function(r){return !have[r.sid];}),olds=okR.filter(function(r){return have[r.sid];}),bad=recs.filter(function(r){return !r.ok;});
-    var hh='<div class="modal" id="dm"><div class="sheet"><h3>Import '+esc(file.name)+'</h3>'+
-      '<p><b>'+news.length+'</b> new responses, <b>'+olds.length+'</b> already in the database, <b>'+bad.length+'</b> with problems.</p>'+
-      (bad.length?'<ul class="msg bad" style="padding-left:18px">'+bad.slice(0,8).map(function(r,i){return '<li>'+esc(r.errs.join("; "))+'</li>';}).join("")+(bad.length>8?'<li>and '+(bad.length-8)+' more</li>':'')+'</ul>':'')+
-      (olds.length?'<label style="display:block;margin:8px 0"><input type="checkbox" id="ovw"> Overwrite the '+olds.length+' that already exist (otherwise they are skipped)</label>':'')+
-      '<p class="msg">Imported rows are tagged with the file name, who imported them and when, and show an "imported" label in the table. Rows marked synthetic are never imported.</p>'+
-      '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn sm" id="ic">Cancel</button><button class="btn sm pri" id="ig"'+(news.length||olds.length?'':' disabled')+'>Import</button></div><p class="msg" id="im"></p></div></div>';
-    qs("#mod").innerHTML=hh;
-    qs("#ic").onclick=function(){qs("#mod").innerHTML="";};
-    qs("#ig").onclick=function(){
-      var ow=!!(qs("#ovw")&&qs("#ovw").checked),list=news.concat(ow?olds:[]);
-      if(!list.length){qs("#mod").innerHTML="";return;}
-      if(!window.confirm("Write "+list.length+" responses to the database?"))return;
-      qs("#ig").disabled=true;var done=0,failed=0;
-      function batch(i){
-        if(i>=list.length){qs("#im").textContent="Done: "+done+" imported"+(failed?", "+failed+" failed":"")+". Reloading...";ST.loaded=false;setTimeout(function(){qs("#mod").innerHTML="";loadRows();},900);return;}
-        var chunk=list.slice(i,i+50).map(function(r){return {session_id:r.sid,created_at:r.created_at,destination:r.destination,entry_point:r.entry_point,payload:r.payload};});
-        sb.rpc("import_responses",{p_rows:chunk,p_overwrite:ow}).then(function(x){
-          if(x.error){failed+=chunk.length;qs("#im").textContent="Error: "+x.error.message;if(/function|schema cache/i.test(x.error.message))qs("#im").textContent+=" (run the import_responses SQL in Supabase first)";return;}
-          done+=chunk.length;qs("#im").textContent="Imported "+done+" of "+list.length+"...";batch(i+50);});
-      }
-      batch(0);
-    };
-  };
-  rd.readAsText(file,"utf-8");
 }
 
 /* ---------- methodology ---------- */
@@ -1000,7 +928,7 @@ var METHOD=[
   "Always last, never randomised: “None of these” (places and loyalty programmes), “Something else” (main reason), “No preference” and “One level is fine” (builder), and “Prefer not to say” (budget bands).",
   "Not randomised: gender, age, residence and the ordered scales (frequency, season of the last visit, nights, annual fee bands, hotel and dinner bands), activities and geographic reach, which also run from narrow to wide.",
   "The order of the blocks is fixed, from the most general to the most specific, and the five tasks of the programme hub always run in the same order.",
-  "Recording: every response stores the order in which each list was shown to that person (field presented_order, also a column in the CSV export). This allows testing position effects, for example average rank by position shown. Responses collected before this was added do not have it.",
+  "Recording: every response stores the order in which each list was shown to that person (field presented_order). This allows testing position effects, for example average rank by position shown. Responses collected before this was added do not have it.",
   "Not done: randomising the order of the two ranking blocks (mechanisms always come before benefits). It could be added, but the later tasks depend on the earlier ones, so it needs a deliberate decision."]],
  ["Anchoring on the last visit",[
   "Questions start from real, recent behaviour, the last visit to the place, and not from hypothetical preferences. This reduces memory bias and social desirability bias.",
@@ -1023,6 +951,14 @@ var METHOD=[
   "Earn and Level up have a “No preference” option.",
   "Portuguese translation is a draft, to be reviewed by back-translation. Text changes are made directly in the survey files.",
   "The data stores the English names and keys, and the language used."]],
+ ["Data cleaning",[
+  "Principle: clean only what shows the person was not answering attentively or was not in the target. Exclusions are decided by rules fixed in advance, applied to every response in the same way, and never by looking at whether an answer is convenient.",
+  "Rule 1, outside the target: people with no holiday in the last 3 years leave the questionnaire and are marked as excluded. Under 18s leave and nothing is saved.",
+  "Rule 2, answering too fast: responses completed in under 180 seconds (3 minutes) are excluded. Reasoning: the median completion time is about 8 minutes (489 s among responses in the 6 destinations), and the questionnaire has three rankings with 8, 9 and 11 items plus several price questions, so a complete and attentive answer in under 3 minutes is very unlikely. 180 s is about one third of the median, and is close to the lower limit of the usual statistical rule for outliers (first quartile minus 1.5 times the interquartile range, calculated on the logarithm of the time, which gives about 135 s). With this rule 3 of the 141 responses in the six destinations are excluded (about 2%).",
+  "Only the fast side is cleaned. Long times (some people leave the page open and come back) do not mean inattention, so they are kept. When times are summarised, the median is used because a few very long answers distort the average.",
+  "Not applied: removing answers because of their content (for example a ranking that looks odd). Rankings are forced choices with no default, so every complete ranking is a valid opinion.",
+  "Transparency: excluded responses are not deleted. They remain in the database, are marked with the reason, and can be inspected in the Responses tab. Sensitivity check: the main results are compared with and without the exclusions, and the rule is kept if the conclusions do not change.",
+  "The threshold should be re-checked when more responses arrive, as the distribution of times may change."]],
  ["Academic feasibility and limits",[
   "Type of study: descriptive and comparative survey across places and tiers.",
   "Convenience and snowball sample, not representative of the population. The results are rankings and comparisons, not population estimates.",
