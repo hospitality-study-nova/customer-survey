@@ -903,7 +903,7 @@ function csvToResponse(h,v,fname,who){
   if(!sid||!UUID_RE.test(sid))errs.push("session_id is not a valid UUID");
   var p={};
   Object.keys(o).forEach(function(k){
-    var x=o[k];if(x===""||k==="created_at"||k==="session_id"||/^built_/.test(k)||k==="is_synthetic")return;
+    var x=o[k];if(x===""||k==="created_at"||k==="session_id"||/^built_/.test(k)||k==="is_synthetic"||k==="record_type")return;
     if(k==="vertical_rank"||k==="mechanism_rank"||k==="benefit_rank"||k==="loyalty_memberships")p[k]=x.split(" > ");
     else if(k==="family_group")p[k]=x.split(", ");
     else if(k==="in_target_place")p[k]=(x==="true"||x==="TRUE");
@@ -913,6 +913,7 @@ function csvToResponse(h,v,fname,who){
   if(o.built_enter||o.built_earn||o.built_level_up||o.built_benefits)p.program_built={enter:o.built_enter||null,earn:o.built_earn||null,level_up:o.built_level_up||null,benefits:o.built_benefits?o.built_benefits.split(" > "):[]};
   if(String(o.is_synthetic).toLowerCase()==="true")errs.push("marked is_synthetic: not importable");
   if(/^SYN-/i.test(o.session_id))errs.push("synthetic id (SYN-): not importable");
+  if(/synthetic|amplif/i.test(o.record_type||""))errs.push("record_type says synthetic/amplified: not importable");
   var ca=o.created_at?new Date(o.created_at):null;if(o.created_at&&isNaN(ca))errs.push("created_at is not a valid date");
   p.import_source=fname;p.imported_at=new Date().toISOString();p.imported_by=who||"";
   return {ok:!errs.length,errs:errs,sid:sid,created_at:(ca&&!isNaN(ca))?ca.toISOString():null,destination:o.destination||null,entry_point:o.entry_point||null,payload:p};
