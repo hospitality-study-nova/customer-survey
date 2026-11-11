@@ -491,7 +491,7 @@ function kwTest(vals,grp,k){
 function mean(a){a=a.filter(function(x){return x!=null;});return a.length?a.reduce(function(s,x){return s+x;},0)/a.length:null;}
 function dmin(n,N){return 2.8*Math.sqrt(1/n+1/Math.max(1,N-n));}
 function personasView(v){
-  var all=complete(),opt=POPTS.filter(function(o){return o.k===(ST.persOpt||"best");})[0]||POPTS[0];
+  var all=complete(),opt=POPTS[0];
   var asg=assignOpt(opt,all),k=opt.groups.length;
   var rowsBy=opt.groups.map(function(g,i){return all.filter(function(r,j){return asg[j]===i;});});
   var assigned=rowsBy.reduce(function(a,x){return a+x.length;},0),un=all.length-assigned;
@@ -512,17 +512,19 @@ function personasView(v){
     if(s.h>0)return {t:"Partly supported",c:"#7a6a1d",w:s.h+" tendency(ies) at p below 0.05, not yet solid after correction"};
     return {t:"No clear difference yet",c:"#666",w:"does not stand out from the others on these answers"};});
   function pb(o){return '<button class="btn sm'+(o.k===opt.k?' pri':'')+'" data-po="'+o.k+'">'+esc(o.name)+'</button>';}
-  var h='<h2>Personas</h2><div class="filters" style="gap:6px">'+pb(POPTS[0])+'<span class="tag" style="margin-left:10px">Other cuts we tested, for reference:</span>'+POPTS.slice(1).map(pb).join("")+'</div>';
+  var unr0=all.filter(function(r,j){return asg[j]<0;}),nNo=ST.rows.filter(function(r){return P(r).screened_out;}).length,nFast=ST.rows.filter(tooFast).length;
+  var h='<h2>Personas</h2><p class="note" style="margin-top:-6px">Five personas that do not overlap. <b>'+assigned+' of '+all.length+'</b> complete responses ('+pct(assigned,all.length)+'%) fit one; <b>'+unr0.length+'</b> ('+pct(unr0.length,all.length)+'%) fit none (for example people who travelled alone). Not counted at all: '+nNo+' with no holiday in the last 3 years and '+nFast+' who answered in under '+MIN_SECONDS+' seconds.</p>';
   if(opt.k==="best"){
     h+=compareCard(opt,rowsBy,stat);
     var TG=30,unr=all.filter(function(r,j){return asg[j]<0;}),tot={n:0,o:0,m:0};
-    h+='<div class="card" style="margin-bottom:14px"><h3>How many answers fit each persona</h3><p class="note">Every complete response counts once, wherever it came from: people who named a place outside our five also count if they fit. Target = '+TG+' people per persona, the minimum to tell a medium-sized difference from chance. “To collect” is how many interviews are still missing to reach it.</p><div class="tablewrap"><table><thead><tr><th>Persona</th><th>In the survey</th><th>Of which other places</th><th>Target</th><th>To collect</th><th>Status</th></tr></thead><tbody>';
+    h+='<div class="card" style="margin-bottom:14px"><h3>How many answers fit each persona</h3><p class="note">Target: '+TG+' people per persona. “To collect” is how many more are needed.</p><div class="tablewrap"><table><thead><tr><th>Persona</th><th>In the survey</th><th>Of which other places</th><th>Target</th><th>To collect</th><th>Status</th></tr></thead><tbody>';
     opt.groups.forEach(function(g,gi){var rs=rowsBy[gi],o=rs.filter(function(r){return placeOf(r)===OTHER;}).length,miss=Math.max(0,TG-rs.length);tot.n+=rs.length;tot.o+=o;tot.m+=miss;
       h+='<tr><td><b>'+esc(g.k)+'</b></td><td>'+rs.length+'</td><td>'+o+'</td><td>'+TG+'</td><td'+(miss?' style="font-weight:700;color:#a15c00"':'')+'>'+miss+'</td><td style="color:'+stat[gi].c+';font-weight:700">'+stat[gi].t+'</td></tr>';});
     h+='<tr><td><b>Total in a persona</b></td><td><b>'+tot.n+'</b></td><td><b>'+tot.o+'</b></td><td>'+(TG*opt.groups.length)+'</td><td><b>'+tot.m+'</b></td><td></td></tr>';
     h+='<tr><td><b>Fit none</b></td><td><b>'+unr.length+'</b></td><td>'+unr.filter(function(r){return placeOf(r)===OTHER;}).length+'</td><td></td><td></td><td><small>'+(unr.length?persShare(unr,function(r){return P(r).travelled_with_last_visit||"No answer";},4):'-')+'</small></td></tr>';
     h+='<tr><td><b>All complete responses</b></td><td><b>'+all.length+'</b></td><td></td><td></td><td></td><td></td></tr></tbody></table></div><p class="note">Statuses come from the tests below. Interviews should focus on the personas with a number in “To collect”, mainly Friends, sport and golf and Couple.</p></div>';
   }
+  h+='<details class="sec"><summary>Details and statistical tests <small>(for the team)</small></summary>';
   h+='<div class="card" style="margin-bottom:14px"><h3>'+esc(opt.name)+'</h3><p class="note">'+esc(opt.desc)+'</p><div class="stl">'+opt.groups.map(function(g,gi){return '<p><b>'+esc(g.k)+'</b> (n='+rowsBy[gi].length+'): <span style="font-weight:700;color:'+stat[gi].c+'">'+stat[gi].t+'</span> <small>'+esc(stat[gi].w)+'</small>'+(stat[gi].t!=="Validated"&&g.recruit?'<br><small><i>To validate: '+esc(g.recruit)+'</i></small>':'')+'</p>';}).join("")+'</div><p class="note"><b>Check:</b> '+assigned+' assigned'+(un?' + '+un+' not assigned':'')+' = '+all.length+' complete responses, each in exactly one group.</p>'+
    '<p class="note"><b>Does the split matter?</b> '+m+' answers compared across the groups'+(opt.skipNote?' (leaving out '+opt.skipNote+')':'')+'. <b>'+sig.length+'</b> differ at p below 0.05 (about '+Math.round(m*0.05)+' would by chance), and <b>'+sigq.length+'</b> survive the correction for many tests. Tests are Kruskal-Wallis on '+all.length+' people; the effect is the epsilon squared (0.01 small, 0.06 medium, 0.14 large).</p>';
   if(sig.length){
@@ -557,6 +559,7 @@ function personasView(v){
   opt.groups.forEach(function(g,gi){var n=rowsBy[gi].length,N=assigned;var need=1/(Math.pow(0.5/2.8,2)-1/Math.max(1,N-n));var needTxt=need>0&&isFinite(need)?Math.max(0,Math.ceil(need)-n):"many";
     h+='<tr><td>'+esc(g.k)+'</td><td>'+n+'</td><td>'+dmin(n,N).toFixed(2)+'</td><td>'+dmin(n+10,N+10).toFixed(2)+'</td><td>'+(needTxt===0?'enough':needTxt==="many"?'many':'about '+needTxt+' more')+'</td></tr>';});
   h+='</tbody></table></div></div>';
+  h+='</details>';
   v.innerHTML=h;
   Array.prototype.forEach.call(v.querySelectorAll("[data-po]"),function(b){b.onclick=function(){ST.persOpt=b.getAttribute("data-po");paint();};});
 }
@@ -968,11 +971,11 @@ var METHOD_A=[
   "A persona is a profile that represents a group of customers who share needs and behaviour. The literature on data-driven personas (Salminen et al., 2021) describes the same idea: personas are built from real user data, not only from imagination, and are then used to design for each group.",
   "How we built ours, in three steps. (1) We looked for patterns in the survey: who people travelled with (families, friends, couples) was the clearest difference in what they value. (2) The team added what the data could not show on its own: golf and sport customers are a distinct group for a loyalty programme, and families should be split by age, because the person we study is the young person who travels with the parents. (3) We structured the groups so that they do not overlap and cover nearly everyone, which is the MECE principle (mutually exclusive, collectively exhaustive; Minto, The Pyramid Principle). Each respondent is in exactly one persona and 99% of respondents fit one.",
   "The result is five personas: Friends, leisure; Friends, sport and golf; Couple; Family, young adults; Family, adults. Premium (would pay more) and sport interest are traits shown inside every persona, not personas, so that each cut uses one lens only.",
-  "Afterwards, the groups were reviewed against the usual segment criteria (measurable, substantial, accessible, differentiable, actionable). The older ways of splitting the same people (price tier, age, entry point, travel companion) are kept on the page for comparison.",
-  "The number of personas is not fixed. After the interviews, groups can be merged or split if the data say so."]],
+  "How many people the personas cover is shown at the top of the Personas page: the share of complete responses that fit a persona and the share that fit none. Responses with no holiday in the last 3 years, and responses completed in under 180 seconds (see Data cleaning), are left out before any of this.",
+  "The number of personas is not fixed: after the interviews, groups can be merged or split if the data say so."]],
  ["How we validate a persona",[
   "Three simple checks. (1) A clear rule: anyone can be assigned to the persona by a simple rule. (2) Enough people: at least 20 in the persona. Below that the status is “To validate”. (3) A consistent pattern: at least one answer where the persona clearly differs from the other personas, by more than chance can explain.",
-  "Validated means all three checks are met. Partly supported means the pattern is there as a tendency but is not yet solid. To validate means too few people to conclude. No clear difference yet means nothing stands out.",
+  "Validated means all three checks are met. Partly supported means the pattern is there as a tendency but is not yet solid. A persona can be partly supported and still be kept: it can be a real and large group that resembles the average respondent, so no single answer stands out from the rest. To validate means too few people to conclude. No clear difference yet means nothing stands out.",
   "Technical note. A pattern is tested for each answer with the Kruskal-Wallis test (it works with ranks, so it suits rankings and ordered price bands). Because about 30 answers are tested at once, p-values are adjusted with the Benjamini-Hochberg correction. An answer that still passes is marked “solid”.",
   "Limits. This is a convenience and snowball sample, young and mostly in summer, so the results compare groups and do not estimate the whole population. Validated means the pattern is clear in our data, not that the persona is proven in the population. The interviews with couples and golf and sport customers are the next step to confirm the smaller personas."]],
  ["Use of AI",[
