@@ -100,6 +100,7 @@ details[open]>summary::before{content:"\25BE"}
 table.cmp th{text-align:left;vertical-align:top;font-size:.78rem}
 table.cmp td{vertical-align:top;font-size:.8rem;min-width:150px}
 table.cmp tr.sec th{background:#EFEFF1;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+details.sec{margin:14px 0}details.sec>summary{cursor:pointer;font-weight:700;font-size:1.05rem;padding:8px 0;border-bottom:1px solid var(--line);margin-bottom:12px}details.sec>summary small{color:var(--muted);font-weight:500}
 </style>
 </head>
 <body>
@@ -622,33 +623,21 @@ function single(k){return function(rows,c){return crossData(rows,k,"none",c);};}
 function cr(a,b){return function(rows,c){return crossData(rows,a,b,c);};}
 (function(){
  var S1="1. Who answered",S2="2. Willingness to pay",S3="3. Relations: places, companions, premium",S4="4. What matters: verticals, mechanisms, benefits",S5="5. Programme they would build";
- [["age","Respondents by age"],["gender","Respondents by gender"],["res","Respondents by residence"],["comp","Who they travelled with"],["dest","Destination of the last visit"],["entry","What brings them (entry point)"],["season","Season of the last visit"],["freq","How many times they visited"],["nights","Nights of the last visit"]].forEach(function(x){addS(S1,"d_"+x[0],x[1],"Share of respondents.",single(x[0]));});
+ [["age","Respondents by age"],["comp","Who they travelled with"],["dest","Destination of the last visit"],["entry","What brings them (entry point)"]].forEach(function(x){addS(S1,"d_"+x[0],x[1],"Share of respondents.",single(x[0]));});
  addS(S1,"d_pers","Respondents by persona","Each response is in one persona or in none.",single("persona"));
  [["jan","Hotel in January: what they would pay per night"],["aug","Hotel in August: what they would pay per night"],["din","Dinner per person, drinks included"]].forEach(function(x){addS(S2,"w_"+x[0],x[1],"Share of respondents.",single(x[0]));});
- addS(S2,"w_jan_dest","Hotel in January by destination","Share inside each destination.",cr("dest","jan"),"stack");
  addS(S2,"w_jan_pers","Hotel in January by persona","Share inside each persona.",cr("persona","jan"),"stack");
- addS(S2,"w_aug_pers","Hotel in August by persona","Share inside each persona.",cr("persona","aug"),"stack");
- addS(S2,"w_din_pers","Dinner by persona","Share inside each persona.",cr("persona","din"),"stack");
  addS(S2,"w_prem_dest","Premium share by destination","Premium = would pay €111 or more for a hotel night in January.",cr("dest","prem"),"stack");
  addS(S2,"w_prem_comp","Premium share by who they travelled with","",cr("comp","prem"),"stack");
- addS(S2,"w_prem_age","Premium share by age","",cr("age","prem"),"stack");
  addS(S3,"r_entry_dest","Entry point by destination","Share inside each destination.",cr("dest","entry"),"stack");
- addS(S3,"r_comp_dest","Who they travelled with, by destination","Share inside each destination.",cr("dest","comp"),"stack");
- addS(S3,"r_age_dest","Age by destination","Share inside each destination.",cr("dest","age"),"stack");
- addS(S3,"r_season_dest","Season by destination","Share inside each destination.",cr("dest","season"),"stack");
- addS(S3,"r_entry_comp","Entry point by who they travelled with","Share inside each companion group.",cr("comp","entry"),"stack");
- addS(S3,"r_prem_entry","Premium share by entry point","",cr("entry","prem"),"stack");
- addS(S3,"r_pers_dest","Persona by destination","Share inside each destination.",cr("dest","persona"),"stack");
  addS(S4,"k_vert","What mattered most: rank score","100 = always ranked first, 0 = always last.",function(rows,c){return scoreData(rows,"vertical_rank",c,false);});
  addS(S4,"k_vert_p","What mattered most, by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"vertical_rank",c,true);},"column");
  addS(S4,"k_mech","Mechanisms: rank score","100 = always ranked first, 0 = always last.",function(rows,c){return scoreData(rows,"mechanism_rank",c,false);});
  addS(S4,"k_mech_p","Mechanisms by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"mechanism_rank",c,true);},"column");
  addS(S4,"k_ben","Benefits: rank score","100 = always ranked first, 0 = always last.",function(rows,c){return scoreData(rows,"benefit_rank",c,false);});
  addS(S4,"k_ben_p","Benefits by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"benefit_rank",c,true);},"column");
- [["prog","Programme type they would build"],["fee","Annual fee they would accept"],["geo","Reach of the programme"],["cross","Activities the programme covers"]].forEach(function(x){addS(S5,"p_"+x[0],x[1],"Share of respondents.",single(x[0]));});
+ [["prog","Programme type they would build"]].forEach(function(x){addS(S5,"p_"+x[0],x[1],"Share of respondents.",single(x[0]));});
  addS(S5,"p_prog_pers","Programme type by persona","Share inside each persona.",cr("persona","prog"),"stack");
- addS(S5,"p_prog_prem","Programme type, Premium against Mainstream","",cr("prem","prog"),"stack");
- addS(S5,"p_geo_dest","Reach by destination","Share inside each destination.",cr("dest","geo"),"stack");
 })();
 function chartVals(d,o){var cat=d.cats.length,out=d.sers.map(function(s){return s.vals.slice();});
   if(d.unit==="share"&&o.mode==="pct"){
@@ -736,8 +725,8 @@ function steeringView(v){
   var cs=ST.cust||(ST.cust={x:"dest",y:"entry"});
   var h='<h2>Steering charts</h2><p class="note">Each chart can be changed (type, share or count, order, colours, size) and downloaded as a PNG with a transparent background, a white PNG, SVG or CSV. Style follows Steering 2: gold AE8C44 and greys, Aptos, bold values; the top 3 bars in gold like the scorecards slides. PNGs are saved at 3x with the slide size encoded, so they paste at the right scale. The filters below apply to every chart.</p>'+
    '<div class="filters"><label>Destination <select id="sf-p"><option value="all">All</option>'+PLACES.concat([OTHER]).map(function(p){return '<option value="'+esc(p)+'"'+(f.place===p?' selected':'')+'>'+esc(p)+'</option>';}).join("")+'</select></label><label>Persona <select id="sf-s"><option value="all">All</option>'+POPTS[0].groups.map(function(g){return '<option value="'+esc(g.k)+'"'+(f.pers===g.k?' selected':'')+'>'+esc(g.k)+'</option>';}).join("")+'</select></label><span class="tag">'+cx.rows.length+' responses</span></div>'+
-   '<h2>Build your own</h2><div class="filters"><label>Rows <select id="cu-x">'+vopts(cs.x,false)+'</select></label><label>Split by <select id="cu-y">'+vopts(cs.y,true)+'</select></label></div><div class="grid ccg" id="cu-g">'+chartCard(ST.customSpec(),true)+'</div>';
-  secs.forEach(function(sec){h+='<h2>'+esc(sec)+'</h2><div class="grid ccg">'+SPECS.filter(function(s){return s.sec===sec;}).map(function(s){return chartCard(s);}).join("")+'</div>';});
+   '<h2>Build your own chart</h2><p class="note">Pick any two things to cross, for example Destination by Entry point, or Persona by Hotel in January. This replaces the long list of ready-made charts.</p><div class="filters"><label>Rows <select id="cu-x">'+vopts(cs.x,false)+'</select></label><label>Split by <select id="cu-y">'+vopts(cs.y,true)+'</select></label></div><div class="grid ccg" id="cu-g">'+chartCard(ST.customSpec(),true)+'</div>';
+  secs.forEach(function(sec,si){var ss=SPECS.filter(function(s){return s.sec===sec;});h+='<details class="sec"'+(si===0?' open':'')+'><summary>'+esc(sec)+' <small>('+ss.length+' charts)</small></summary><div class="grid ccg">'+ss.map(function(s){return chartCard(s);}).join("")+'</div></details>';});
   v.innerHTML=h;
   Array.prototype.forEach.call(v.querySelectorAll(".cc"),function(c){bindChart(c);drawChart(c);});
   qs("#sf-p").onchange=function(){ST.sf.place=this.value;paint();};qs("#sf-s").onchange=function(){ST.sf.pers=this.value;paint();};
