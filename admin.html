@@ -906,7 +906,7 @@ function csvToResponse(h,v,fname,who){
     var x=o[k];if(x===""||k==="created_at"||k==="session_id"||/^built_/.test(k)||k==="is_synthetic"||k==="record_type")return;
     if(k==="vertical_rank"||k==="mechanism_rank"||k==="benefit_rank"||k==="loyalty_memberships")p[k]=x.split(" > ");
     else if(k==="family_group")p[k]=x.split(", ");
-    else if(k==="in_target_place")p[k]=(x==="true"||x==="TRUE");
+    else if(k==="in_target_place")p[k]=/^(true|1|yes)$/i.test(x);
     else if(k==="duration_s"){var n=Number(x);if(isNaN(n))errs.push("duration_s is not a number");else p[k]=n;}
     else if(k==="presented_order"){try{p[k]=JSON.parse(x);}catch(e){}}
     else p[k]=x;});
