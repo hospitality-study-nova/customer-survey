@@ -833,15 +833,17 @@ function kpi(n,l){return '<div class="kpi"><b>'+esc(n)+'</b><span>'+esc(l)+'</sp
 function fmtDate(s){var d=new Date(s);return d.toLocaleDateString("en-GB")+" "+d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});}
 function responsesView(v){
   var rows=ST.rows.filter(function(r){return ST.filter==="all"||placeOf(r)===ST.filter;});
-  var h='<h2>Individual responses</h2><div class="filters"><select id="flt"><option value="all">All destinations</option>'+PLACES.concat([OTHER]).map(function(p){return '<option value="'+esc(p)+'"'+(ST.filter===p?' selected':'')+'>'+esc(p==OTHER?"Other places":p)+'</option>';}).join("")+'</select><span class="tag">'+rows.length+' records</span><span style="flex:1"></span><button class="btn sm" id="csv">Export CSV</button></div>';
+  var h='<h2>Individual responses</h2><div class="filters"><select id="flt"><option value="all">All destinations</option>'+PLACES.concat([OTHER]).map(function(p){return '<option value="'+esc(p)+'"'+(ST.filter===p?' selected':'')+'>'+esc(p==OTHER?"Other places":p)+'</option>';}).join("")+'</select><span class="tag">'+rows.length+' records</span><span style="flex:1"></span><button class="btn sm" id="csv">Export CSV</button><button class="btn sm" id="imp">Import CSV</button><input type="file" id="impf" accept=".csv,text/csv" style="display:none"></div>';
   h+='<div class="tablewrap"><table><thead><tr><th>Date</th><th>Place</th><th>Gender</th><th>Age</th><th>Language</th><th>Min.</th><th></th></tr></thead><tbody>';
   rows.forEach(function(r,i){var p=P(r);
-    h+='<tr class="click" data-i="'+i+'"><td>'+esc(fmtDate(r.created_at))+'</td><td>'+esc(p.in_target_place?p.destination:(p.other_destination||"Other"))+'</td><td>'+esc(p.gender||"")+'</td><td>'+esc(p.age||"")+'</td><td>'+esc((p.language||"").toUpperCase())+'</td><td>'+(p.duration_s?Math.round(p.duration_s/60*10)/10:"")+'</td><td>'+(isScreened(r)?'<span class="tag warn">excluded</span>':'')+'</td></tr>';});
+    h+='<tr class="click" data-i="'+i+'"><td>'+esc(fmtDate(r.created_at))+'</td><td>'+esc(p.in_target_place?p.destination:(p.other_destination||"Other"))+'</td><td>'+esc(p.gender||"")+'</td><td>'+esc(p.age||"")+'</td><td>'+esc((p.language||"").toUpperCase())+'</td><td>'+(p.duration_s?Math.round(p.duration_s/60*10)/10:"")+'</td><td>'+(isScreened(r)?'<span class="tag warn">excluded</span>':'')+(p.import_source?'<span class="tag">imported</span>':'')+'</td></tr>';});
   if(!rows.length)h+='<tr><td colspan="7" class="empty">No responses yet.</td></tr>';
   h+='</tbody></table></div>';
   v.innerHTML=h;
   qs("#flt").onchange=function(){ST.filter=this.value;paint();};
   qs("#csv").onclick=function(){exportCsv(rows);};
+  qs("#imp").onclick=function(){qs("#impf").click();};
+  qs("#impf").onchange=function(e){var f=e.target.files[0];e.target.value="";if(f)importCsv(f);};
   Array.prototype.forEach.call(v.querySelectorAll("tr.click"),function(tr){tr.onclick=function(){detail(rows[+tr.getAttribute("data-i")]);};});
 }
 function detail(r){
@@ -877,6 +879,80 @@ function exportCsv(rows){
     lines.push(cols.map(function(c){return cell(c in m?m[c]:p[c]);}).join(";"));});
   var blob=new Blob(["﻿"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"});
   var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="holiday-study-"+new Date().toISOString().slice(0,10)+".csv";document.body.appendChild(a);a.click();document.body.removeChild(a);
+}
+
+/* ---------- import CSV (same format as Export CSV) ---------- */
+function parseCsv(t){
+  t=t.replace(/^﻿/,"");
+  var first=t.split(/\r?\n/)[0],d=(first.split(";").length>=first.split(",").length)?";":",";
+  var rows=[],row=[],cur="",q=false,i;
+  for(i=0;i<t.length;i++){var ch=t[i];
+    if(q){if(ch==='"'){if(t[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}
+    else if(ch==='"')q=true;
+    else if(ch===d){row.push(cur);cur="";}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t[i+1]==="\n")i++;row.push(cur);cur="";if(row.length>1||row[0]!=="")rows.push(row);row=[];}
+    else cur+=ch;}
+  if(cur!==""||row.length){row.push(cur);rows.push(row);}
+  return rows;
+}
+var UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function csvToResponse(h,v,fname,who){
+  var o={},errs=[];h.forEach(function(c,i){o[c.trim()]=(v[i]==null?"":v[i]).trim();});
+  var sid=o.session_id;
+  if(!sid)sid=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():null;
+  if(!sid||!UUID_RE.test(sid))errs.push("session_id is not a valid UUID");
+  var p={};
+  Object.keys(o).forEach(function(k){
+    var x=o[k];if(x===""||k==="created_at"||k==="session_id"||/^built_/.test(k)||k==="is_synthetic")return;
+    if(k==="vertical_rank"||k==="mechanism_rank"||k==="benefit_rank"||k==="loyalty_memberships")p[k]=x.split(" > ");
+    else if(k==="family_group")p[k]=x.split(", ");
+    else if(k==="in_target_place")p[k]=(x==="true"||x==="TRUE");
+    else if(k==="duration_s"){var n=Number(x);if(isNaN(n))errs.push("duration_s is not a number");else p[k]=n;}
+    else if(k==="presented_order"){try{p[k]=JSON.parse(x);}catch(e){}}
+    else p[k]=x;});
+  if(o.built_enter||o.built_earn||o.built_level_up||o.built_benefits)p.program_built={enter:o.built_enter||null,earn:o.built_earn||null,level_up:o.built_level_up||null,benefits:o.built_benefits?o.built_benefits.split(" > "):[]};
+  if(String(o.is_synthetic).toLowerCase()==="true")errs.push("marked is_synthetic: not importable");
+  if(/^SYN-/i.test(o.session_id))errs.push("synthetic id (SYN-): not importable");
+  var ca=o.created_at?new Date(o.created_at):null;if(o.created_at&&isNaN(ca))errs.push("created_at is not a valid date");
+  p.import_source=fname;p.imported_at=new Date().toISOString();p.imported_by=who||"";
+  return {ok:!errs.length,errs:errs,sid:sid,created_at:(ca&&!isNaN(ca))?ca.toISOString():null,destination:o.destination||null,entry_point:o.entry_point||null,payload:p};
+}
+function importCsv(file){
+  var rd=new FileReader();
+  rd.onload=function(){
+    var tab=parseCsv(String(rd.result));
+    if(tab.length<2){window.alert("The file has no rows.");return;}
+    var h=tab[0].map(function(x){return x.trim();});
+    if(h.indexOf("destination")<0||h.indexOf("session_id")<0){window.alert("This does not look like an Export CSV file (needs the destination and session_id columns).");return;}
+    var have={};ST.rows.forEach(function(r){have[r.session_id]=1;});
+    var who=ST.user&&ST.user.email||"";
+    var recs=tab.slice(1).map(function(v){return csvToResponse(h,v,file.name,who);});
+    var seen={};recs.forEach(function(r){if(r.ok&&seen[r.sid]){r.ok=false;r.errs.push("duplicate session_id inside the file");}seen[r.sid]=1;});
+    var okR=recs.filter(function(r){return r.ok;}),news=okR.filter(function(r){return !have[r.sid];}),olds=okR.filter(function(r){return have[r.sid];}),bad=recs.filter(function(r){return !r.ok;});
+    var hh='<div class="modal" id="dm"><div class="sheet"><h3>Import '+esc(file.name)+'</h3>'+
+      '<p><b>'+news.length+'</b> new responses, <b>'+olds.length+'</b> already in the database, <b>'+bad.length+'</b> with problems.</p>'+
+      (bad.length?'<ul class="msg bad" style="padding-left:18px">'+bad.slice(0,8).map(function(r,i){return '<li>'+esc(r.errs.join("; "))+'</li>';}).join("")+(bad.length>8?'<li>and '+(bad.length-8)+' more</li>':'')+'</ul>':'')+
+      (olds.length?'<label style="display:block;margin:8px 0"><input type="checkbox" id="ovw"> Overwrite the '+olds.length+' that already exist (otherwise they are skipped)</label>':'')+
+      '<p class="msg">Imported rows are tagged with the file name, who imported them and when, and show an "imported" label in the table. Rows marked synthetic are never imported.</p>'+
+      '<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn sm" id="ic">Cancel</button><button class="btn sm pri" id="ig"'+(news.length||olds.length?'':' disabled')+'>Import</button></div><p class="msg" id="im"></p></div></div>';
+    qs("#mod").innerHTML=hh;
+    qs("#ic").onclick=function(){qs("#mod").innerHTML="";};
+    qs("#ig").onclick=function(){
+      var ow=!!(qs("#ovw")&&qs("#ovw").checked),list=news.concat(ow?olds:[]);
+      if(!list.length){qs("#mod").innerHTML="";return;}
+      if(!window.confirm("Write "+list.length+" responses to the database?"))return;
+      qs("#ig").disabled=true;var done=0,failed=0;
+      function batch(i){
+        if(i>=list.length){qs("#im").textContent="Done: "+done+" imported"+(failed?", "+failed+" failed":"")+". Reloading...";ST.loaded=false;setTimeout(function(){qs("#mod").innerHTML="";loadRows();},900);return;}
+        var chunk=list.slice(i,i+50).map(function(r){return {session_id:r.sid,created_at:r.created_at,destination:r.destination,entry_point:r.entry_point,payload:r.payload};});
+        sb.rpc("import_responses",{p_rows:chunk,p_overwrite:ow}).then(function(x){
+          if(x.error){failed+=chunk.length;qs("#im").textContent="Error: "+x.error.message;if(/function|schema cache/i.test(x.error.message))qs("#im").textContent+=" (run the import_responses SQL in Supabase first)";return;}
+          done+=chunk.length;qs("#im").textContent="Imported "+done+" of "+list.length+"...";batch(i+50);});
+      }
+      batch(0);
+    };
+  };
+  rd.readAsText(file,"utf-8");
 }
 
 /* ---------- methodology ---------- */
