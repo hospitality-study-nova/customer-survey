@@ -80,6 +80,16 @@ details>summary::before{content:"\25B8";display:inline-block;margin-right:6px;co
 details[open]>summary::before{content:"\25BE"}
 .card.pers{display:flex;flex-direction:column}
 .ph{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}.ph h3{margin:0;font-size:1.05rem}
+.pgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+@media(max-width:1100px){.pgrid{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}}
+.pcol{border:1px solid var(--line);border-radius:14px;padding:12px 12px 10px;background:#fff;cursor:pointer;font-size:.8rem;line-height:1.35}
+.pcol:hover{border-color:var(--muted)}
+.pcol h3{margin:0;font-size:.95rem}
+.pcol .pst{margin:2px 0 4px;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
+.pcol .pn1{margin:0 0 4px;font-size:.88rem}
+.pcol .pt{margin:8px 0 2px;font-weight:700;font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.pcol .ps{margin:0}
+.pcol ol.pl3{margin:0;padding-left:18px}
 .tag{font-size:.72rem;font-weight:700;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 9px;white-space:nowrap}
 .voice{font-style:italic;color:var(--muted);font-size:.86rem;margin:2px 0 8px}
 .pt{font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);margin:14px 0 5px}
@@ -199,8 +209,9 @@ function loadRows(){
 function P(r){return r.payload||{};}
 var MIN_SECONDS=180;
 function tooFast(r){var p=P(r);return !p.screened_out&&p.vertical_rank&&p.duration_s>0&&p.duration_s<MIN_SECONDS;}
-function isScreened(r){return !!P(r).screened_out||tooFast(r);}
-function exclReason(r){var p=P(r);return p.screened_out?(p.screened_out==="no_holiday"?"no holiday in the last 3 years":p.screened_out):(tooFast(r)?"answered in "+p.duration_s+" s, under the "+MIN_SECONDS+" s minimum":"");}
+function abroad(r){var p=P(r);return !p.screened_out&&!p.in_target_place&&!!p.other_destination&&otherGroup(p.other_destination)==="Abroad";}
+function isScreened(r){return !!P(r).screened_out||tooFast(r)||abroad(r);}
+function exclReason(r){var p=P(r);return p.screened_out?(p.screened_out==="no_holiday"?"no holiday in the last 3 years":p.screened_out):(tooFast(r)?"answered in "+p.duration_s+" s, under the "+MIN_SECONDS+" s minimum":(abroad(r)?"holiday place is outside Portugal":""));}
 function placeOf(r){var p=P(r);return p.in_target_place&&p.destination?p.destination:OTHER;}
 function complete(){return ST.rows.filter(function(r){return !isScreened(r);});}
 function filtered(){
@@ -512,10 +523,10 @@ function personasView(v){
     if(s.h>0)return {t:"Partly supported",c:"#7a6a1d",w:s.h+" tendency(ies) at p below 0.05, not yet solid after correction"};
     return {t:"No clear difference yet",c:"#666",w:"does not stand out from the others on these answers"};});
   function pb(o){return '<button class="btn sm'+(o.k===opt.k?' pri':'')+'" data-po="'+o.k+'">'+esc(o.name)+'</button>';}
-  var unr0=all.filter(function(r,j){return asg[j]<0;}),nNo=ST.rows.filter(function(r){return P(r).screened_out;}).length,nFast=ST.rows.filter(tooFast).length;
-  var h='<h2>Personas</h2><p class="note" style="margin-top:-6px">Five personas that do not overlap. <b>'+assigned+' of '+all.length+'</b> complete responses ('+pct(assigned,all.length)+'%) fit one; <b>'+unr0.length+'</b> ('+pct(unr0.length,all.length)+'%) fit none (for example people who travelled alone). Not counted at all: '+nNo+' with no holiday in the last 3 years and '+nFast+' who answered in under '+MIN_SECONDS+' seconds.</p>';
+  var unr0=all.filter(function(r,j){return asg[j]<0;}),nNo=ST.rows.filter(function(r){return P(r).screened_out;}).length,nFast=ST.rows.filter(tooFast).length,nAb=ST.rows.filter(abroad).length;
+  var h='<h2>Personas</h2><p class="note" style="margin-top:-6px">Five personas that do not overlap. <b>'+assigned+' of '+all.length+'</b> complete responses ('+pct(assigned,all.length)+'%) fit one; <b>'+unr0.length+'</b> ('+pct(unr0.length,all.length)+'%) fit none (for example people who travelled alone). Not counted at all: '+nNo+' with no holiday in the last 3 years, '+nFast+' who answered in under '+MIN_SECONDS+' seconds and '+nAb+' whose holiday place was outside Portugal.</p>';
   if(opt.k==="best"){
-    h+=compareCard(opt,rowsBy,stat);
+    h+=personaSlide(opt,rowsBy,stat,assigned);
     var TG=30,unr=all.filter(function(r,j){return asg[j]<0;}),tot={n:0,o:0,m:0};
     h+='<div class="card" style="margin-bottom:14px"><h3>How many answers fit each persona</h3><p class="note">Target: '+TG+' people per persona. “To collect” is how many more are needed.</p><div class="tablewrap"><table><thead><tr><th>Persona</th><th>In the survey</th><th>Of which other places</th><th>Target</th><th>To collect</th><th>Status</th></tr></thead><tbody>';
     opt.groups.forEach(function(g,gi){var rs=rowsBy[gi],o=rs.filter(function(r){return placeOf(r)===OTHER;}).length,miss=Math.max(0,TG-rs.length);tot.n+=rs.length;tot.o+=o;tot.m+=miss;
@@ -537,7 +548,7 @@ function personasView(v){
   h+='</div><div class="grid cards">';
   opt.groups.forEach(function(g,gi){
     var rs=rowsBy[gi],n=rs.length;
-    h+='<div class="card pers" style="border-left:4px solid '+stat[gi].c+'"><div class="ph"><h3>'+esc(g.k)+'</h3><span class="tag" style="color:'+stat[gi].c+'">'+stat[gi].t+' · n='+n+'</span></div><p class="note"><b>Rule:</b> '+esc(g.rule)+'</p>'+(g.voice?'<p class="voice">“'+esc(g.voice)+'” <small>(team hypothesis)</small></p>':'');
+    h+='<div class="card pers" id="pc'+gi+'" style="border-left:4px solid '+stat[gi].c+'"><div class="ph"><h3>'+esc(g.k)+'</h3><span class="tag" style="color:'+stat[gi].c+'">'+stat[gi].t+' · n='+n+'</span></div><p class="note"><b>Rule:</b> '+esc(g.rule)+'</p>'+(g.voice?'<p class="voice">“'+esc(g.voice)+'” <small>(team hypothesis)</small></p>':'');
     if(!n){h+='<p class="empty">No data.</p></div>';return;}
     var up=[],dn=[];sig.forEach(function(x){var ids=rs.map(function(r){return all.indexOf(r);}),oth=[];all.forEach(function(r,j){if(asg[j]>-1&&asg[j]!==gi)oth.push(x.o.vals[j]);});
       var a=mean(ids.map(function(i){return x.o.vals[i];})),b=mean(oth);if(a==null||b==null)return;var sd=Math.max(0.01,(Math.max.apply(null,x.o.vals.filter(function(z){return z!=null;}))-Math.min.apply(null,x.o.vals.filter(function(z){return z!=null;})))/4);
@@ -561,6 +572,7 @@ function personasView(v){
   h+='</tbody></table></div></div>';
   h+='</details>';
   v.innerHTML=h;
+  Array.prototype.forEach.call(v.querySelectorAll("[data-pc]"),function(c){c.onclick=function(){var d=v.querySelector("details.sec");if(d)d.open=true;var t=v.querySelector("#pc"+c.getAttribute("data-pc"));if(t)t.scrollIntoView({behavior:"smooth",block:"start"});};});
   Array.prototype.forEach.call(v.querySelectorAll("[data-po]"),function(b){b.onclick=function(){ST.persOpt=b.getAttribute("data-po");paint();};});
 }
 function persPts(rows,get){
@@ -740,6 +752,24 @@ function steeringView(v){
 }
 function topPts(rs,field,k){return persPts(rs,function(r){return P(r)[field];}).slice(0,k||3).map(function(x,i){return (i+1)+'. '+esc(x[0]);}).join("<br>")||"-";}
 function wtpP(rs,q){var v=rs.map(function(r){return wtpPct(q,P(r)[q.f]);}).filter(function(x){return x!=null;});return v.length?Math.round(mean(v)):null;}
+function personaSlide(opt,rowsBy,stat,assigned){
+  function names(rs,field){return persPts(rs,function(r){return P(r)[field];}).slice(0,3).map(function(x,i){return '<li>'+esc(x[0])+'</li>';}).join("")||'<li>-</li>';}
+  function top(rs,get,k){return persShare(rs,get,k);}
+  function mode(rs,get){var t=tally(rs,get);return t.length?esc(t[0][0])+' <b>'+pct(t[0][1],rs.length)+'%</b>':"-";}
+  var h='<div class="pgrid">';
+  opt.groups.forEach(function(g,gi){var rs=rowsBy[gi],n=rs.length;
+    h+='<div class="pcol" data-pc="'+gi+'" style="border-top:5px solid '+stat[gi].c+'" tabindex="0"><h3>'+esc(g.k)+'</h3><p class="pst" style="color:'+stat[gi].c+'">'+stat[gi].t+'</p>'+
+     '<p class="pn1"><b>'+n+'</b> people <small>('+pct(n,assigned)+'% of the sample)</small></p>'+
+     '<p class="pt">Who</p><p class="ps">'+top(rs,function(r){return P(r).age;},2)+'</p>'+
+     '<p class="pt">Why they go</p><p class="ps">'+top(rs,function(r){return entryP(r);},2)+'</p>'+
+     '<p class="pt">Where</p><p class="ps">'+top(rs,function(r){return placeOf(r);},2)+'</p>'+
+     '<p class="pt">What they value most</p><ol class="pl3">'+names(rs,"vertical_rank")+'</ol>'+
+     '<p class="pt">Mechanisms</p><ol class="pl3">'+names(rs,"mechanism_rank")+'</ol>'+
+     '<p class="pt">Benefits</p><ol class="pl3">'+names(rs,"benefit_rank")+'</ol>'+
+     '<p class="pt">Programme they prefer</p><p class="ps">'+mode(rs,function(r){return P(r).program_type;})+'</p>'+
+     '<p class="pt">Hotel night in January</p><p class="ps">'+mode(rs,function(r){return P(r).wtp_hotel_jan_double_two_breakfast;})+'</p></div>';});
+  return h+'</div><p class="note" style="margin-top:8px">Click a persona for its full card and the tests.</p>';
+}
 function compareCard(opt,rowsBy,stat){
   var G=opt.groups,rows=[];
   function row(label,fn,hi){var cells=G.map(function(g,gi){return fn(rowsBy[gi],gi);}),best=null;
@@ -986,6 +1016,7 @@ var METHOD_A=[
   "Principle: clean only what shows that the person was not answering attentively or was not in the target. Rules are fixed in advance and applied to every response in the same way. Nothing is deleted: excluded responses stay in the database, are marked with the reason and are only left out of the analysis.",
   "Rule 1, outside the target: people with no holiday in the last 3 years leave the questionnaire and are marked as excluded. Under 18s leave and nothing is saved.",
   "Rule 2, answering too fast: responses completed in under 180 seconds (3 minutes) are excluded. The median time is about 8 minutes (489 s in the six destinations) and the questionnaire has three rankings (8, 9 and 11 items) and several price questions, so a complete and attentive answer in under 3 minutes is very unlikely. 180 s is about one third of the median and close to the lower limit of the usual outlier rule (first quartile minus 1.5 times the interquartile range, on the logarithm of the time), which gives about 135 s.",
+  "Rule 3, holiday outside Portugal: people who chose “None of these” and named a place abroad are excluded, because the study is about holidays in Portugal. Other places in Portugal (other parts of the Algarve, Lisbon area, the North, the islands) are kept as “other places”.",
   "Only the fast side is cleaned. Long times (someone who leaves the page open and comes back) do not mean inattention, so they are kept. Times are summarised with the median, because a few very long answers distort the average.",
   "Not applied: removing answers because of their content. Rankings are forced choices with no default, so every complete ranking is a valid opinion.",
   "Sensitivity check, with responses up to 11 November (172 responses). Stricter minimums were tried: 180 s keeps 169 responses, 240 s keeps 167, 300 s keeps 152, 360 s keeps 132, 420 s keeps 110 and 480 s keeps 91. Up to 240 s the personas keep the same status. At 300 s Family, adults becomes validated (n=33), at 360 s it goes back to partly supported, and from 420 s Friends, leisure drops from validated to to validate (n=17). The small personas (Couple, Friends, sport and golf) lose people fastest, because fast answers are not spread evenly across groups. A higher minimum therefore does not strengthen the findings and weakens the groups that most need more responses, so 180 s is kept as the rule and stricter values are reported only as a robustness check.",
