@@ -88,6 +88,7 @@ details[open]>summary::before{content:"\25BE"}
 .pl .g{display:inline-flex;width:20px;height:20px;border-radius:50%;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;background:var(--line)}
 .pw{font-size:.82rem}.pw td{padding:4px 6px 4px 0;vertical-align:top;border:0}
 .pn{margin:0;padding-left:18px;font-size:.84rem;line-height:1.55}
+.stl p{margin:4px 0;font-size:.88rem}.stl{margin:6px 0 10px}
 .hyp{text-transform:none;letter-spacing:0;font-weight:500;font-style:italic}
 </style>
 </head>
@@ -402,6 +403,17 @@ function entryP(r){var p=P(r),e=p.entry_point;if(e==="other"){var t=String(p.ent
   if(e==="Beach")return "Beach";if(e==="Nightlife")return "Nightlife";if(e==="Hotel"||e==="Nature and wellness")return "Hotel and wellness";return e?"Other motives":null;}
 function jan(r){return WTPQ[0].lab.indexOf(P(r)[WTPQ[0].f]);}
 var POPTS=[
+ {k:"best",name:"Best set (combined)",
+  desc:"The strongest findings put together, each person assigned to the first rule they meet, so the groups do not overlap: people drawn by sport, golf or marina first, then those who would pay more, then everyone else by who they travelled with. The number of personas is not fixed: each one is labelled validated, partly supported or still to validate.",
+  skip:/^(wtp_|prog|geo|cross|V_Golf|V_Sports|V_Marina)/,skipNote:"the price and programme answers and the sport, golf and marina rankings, which define the first two groups",
+  groups:[{k:"Active (sport, golf, marina)",rule:"Entry point is Golf, Sports or Marina",test:function(r){var e=P(r).entry_point;return e==="Golf"||e==="Sports"||e==="Marina";},
+    recruit:"Interview 10 or more: golfers, and people who come for padel, tennis or the marina. Mix ages and couples, friends and family."},
+   {k:"Premium",rule:"Not Active, and would pay the €111 to €150 band or more for a hotel night in January",test:function(r){return jan(r)>=2;},
+    recruit:"Interview 10 or more from 4 or 5 star hotels (Vilamoura, Tróia), aged 25 or over."},
+   {k:"Friends",rule:"Not Active or Premium, and travelled with friends or a club",test:function(r){var w=P(r).travelled_with_last_visit;return w==="With friends"||w==="With a club or similar";}},
+   {k:"Family",rule:"Not Active or Premium, and travelled with family",test:function(r){return P(r).travelled_with_last_visit==="Family";}},
+   {k:"Couple",rule:"Not Active or Premium, and travelled as a couple",test:function(r){return P(r).travelled_with_last_visit==="As a couple";},
+    recruit:"Interview 10 or more couples aged 25 or over."}]},
  {k:"tier",name:"Price and programme tier",
   desc:"Formed from what people would pay and how broad a programme they want. Clustering of these answers found three stable groups; the simple rules below reproduce them with about 90% accuracy and cover everyone.",
   skip:/^(wtp_|prog|geo|cross)/,skipNote:"the price and programme answers, which define the groups",
@@ -460,7 +472,7 @@ function kwTest(vals,grp,k){
 function mean(a){a=a.filter(function(x){return x!=null;});return a.length?a.reduce(function(s,x){return s+x;},0)/a.length:null;}
 function dmin(n,N){return 2.8*Math.sqrt(1/n+1/Math.max(1,N-n));}
 function personasView(v){
-  var all=complete(),opt=POPTS.filter(function(o){return o.k===(ST.persOpt||"tier");})[0]||POPTS[0];
+  var all=complete(),opt=POPTS.filter(function(o){return o.k===(ST.persOpt||"best");})[0]||POPTS[0];
   var asg=assignOpt(opt,all),k=opt.groups.length;
   var rowsBy=opt.groups.map(function(g,i){return all.filter(function(r,j){return asg[j]===i;});});
   var assigned=rowsBy.reduce(function(a,x){return a+x.length;},0),un=all.length-assigned;
@@ -469,8 +481,17 @@ function personasView(v){
   var m=res.length,srt=res.slice().sort(function(a,b){return a.t.p-b.t.p;}),minq=1;
   for(var i=m-1;i>=0;i--){minq=Math.min(minq,srt[i].t.p*m/(i+1));srt[i].q=Math.min(1,minq);}
   var sig=srt.filter(function(x){return x.t.p<0.05;}),sigq=srt.filter(function(x){return x.q<0.05;});
+  var st=opt.groups.map(function(){return {s:0,h:0};}),pt=[];
+  opt.groups.forEach(function(g,gi){var g2=asg.map(function(a){return a<0?-1:(a===gi?1:0);});L.forEach(function(o){if(opt.skip&&opt.skip.test(o.id))return;var t=kwTest(o.vals,g2,2);if(t)pt.push({gi:gi,p:t.p});});});
+  pt.sort(function(a,b){return a.p-b.p;});var mq=1;for(var qi=pt.length-1;qi>=0;qi--){mq=Math.min(mq,pt[qi].p*pt.length/(qi+1));pt[qi].q=Math.min(1,mq);}
+  pt.forEach(function(x){if(x.p<0.05)st[x.gi].h++;if(x.q<0.05)st[x.gi].s++;});
+  var stat=opt.groups.map(function(g,gi){var n=rowsBy[gi].length,s=st[gi];
+    if(n<20)return {t:"To validate",c:"#a15c00",w:"only "+n+" people, too few to be sure"+(s.h?" (early hints: "+s.h+")":"")};
+    if(s.s>0)return {t:"Validated",c:"#1d7a3a",w:s.s+" clear difference(s) from the others, "+s.h+" at p below 0.05"};
+    if(s.h>0)return {t:"Partly supported",c:"#7a6a1d",w:s.h+" tendency(ies) at p below 0.05, not yet solid after correction"};
+    return {t:"No clear difference yet",c:"#666",w:"does not stand out from the others on these answers"};});
   var h='<h2>Personas</h2><div class="filters" style="gap:6px">'+POPTS.map(function(o){return '<button class="btn sm'+(o.k===opt.k?' pri':'')+'" data-po="'+o.k+'">'+esc(o.name)+'</button>';}).join("")+'</div>';
-  h+='<div class="card" style="margin-bottom:14px"><h3>'+esc(opt.name)+'</h3><p class="note">'+esc(opt.desc)+'</p><p class="note"><b>Check:</b> '+assigned+' assigned'+(un?' + '+un+' not assigned':'')+' = '+all.length+' complete responses, each in exactly one group.</p>'+
+  h+='<div class="card" style="margin-bottom:14px"><h3>'+esc(opt.name)+'</h3><p class="note">'+esc(opt.desc)+'</p><div class="stl">'+opt.groups.map(function(g,gi){return '<p><b>'+esc(g.k)+'</b> (n='+rowsBy[gi].length+'): <span style="font-weight:700;color:'+stat[gi].c+'">'+stat[gi].t+'</span> <small>'+esc(stat[gi].w)+'</small>'+(stat[gi].t!=="Validated"&&g.recruit?'<br><small><i>To validate: '+esc(g.recruit)+'</i></small>':'')+'</p>';}).join("")+'</div><p class="note"><b>Check:</b> '+assigned+' assigned'+(un?' + '+un+' not assigned':'')+' = '+all.length+' complete responses, each in exactly one group.</p>'+
    '<p class="note"><b>Does the split matter?</b> '+m+' answers compared across the groups'+(opt.skipNote?' (leaving out '+opt.skipNote+')':'')+'. <b>'+sig.length+'</b> differ at p below 0.05 (about '+Math.round(m*0.05)+' would by chance), and <b>'+sigq.length+'</b> survive the correction for many tests. Tests are Kruskal-Wallis on '+all.length+' people; the effect is the epsilon squared (0.01 small, 0.06 medium, 0.14 large).</p>';
   if(sig.length){
     h+='<div class="tablewrap"><table><thead><tr><th>Answer</th><th>Type</th>'+opt.groups.map(function(g){return '<th>'+esc(g.k)+'</th>';}).join("")+'<th>p</th><th>Effect</th><th>Strength</th></tr></thead><tbody>';
@@ -481,8 +502,8 @@ function personasView(v){
   }else h+='<p class="empty">No answers differ clearly across these groups.</p>';
   h+='</div><div class="grid cards">';
   opt.groups.forEach(function(g,gi){
-    var rs=rowsBy[gi],n=rs.length,st=n>=40?"Solid sample":n>=20?"Fair sample":"Indicative only";
-    h+='<div class="card pers"><div class="ph"><h3>'+esc(g.k)+'</h3><span class="tag">n='+n+' · '+pct(n,all.length)+'% · '+st+'</span></div><p class="note"><b>Rule:</b> '+esc(g.rule)+'</p>'+(g.voice?'<p class="voice">“'+esc(g.voice)+'” <small>(team hypothesis)</small></p>':'');
+    var rs=rowsBy[gi],n=rs.length;
+    h+='<div class="card pers" style="border-left:4px solid '+stat[gi].c+'"><div class="ph"><h3>'+esc(g.k)+'</h3><span class="tag" style="color:'+stat[gi].c+'">'+stat[gi].t+' · n='+n+'</span></div><p class="note"><b>Rule:</b> '+esc(g.rule)+'</p>'+(g.voice?'<p class="voice">“'+esc(g.voice)+'” <small>(team hypothesis)</small></p>':'');
     if(!n){h+='<p class="empty">No data.</p></div>';return;}
     var up=[],dn=[];sig.forEach(function(x){var ids=rs.map(function(r){return all.indexOf(r);}),oth=[];all.forEach(function(r,j){if(asg[j]>-1&&asg[j]!==gi)oth.push(x.o.vals[j]);});
       var a=mean(ids.map(function(i){return x.o.vals[i];})),b=mean(oth);if(a==null||b==null)return;var sd=Math.max(0.01,(Math.max.apply(null,x.o.vals.filter(function(z){return z!=null;}))-Math.min.apply(null,x.o.vals.filter(function(z){return z!=null;})))/4);
