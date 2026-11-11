@@ -80,6 +80,11 @@ details>summary::before{content:"\25B8";display:inline-block;margin-right:6px;co
 details[open]>summary::before{content:"\25BE"}
 .card.pers{display:flex;flex-direction:column}
 .ph{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}.ph h3{margin:0;font-size:1.05rem}
+.tbar{display:flex;height:22px;border-radius:6px;overflow:hidden;min-width:220px;background:#EFEFF1}
+.tseg{display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;color:#404041;overflow:hidden}
+.tn{color:var(--muted);font-size:.68rem}
+.tleg{display:flex;gap:14px;flex-wrap:wrap;font-size:.74rem;margin:4px 0 10px}.tleg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.paytb td,.paytb th{white-space:normal;vertical-align:top;font-size:.8rem}
 .funnel{display:flex;align-items:stretch;justify-content:center;gap:6px;flex-wrap:wrap;margin:6px 0 16px}
 .fbox{border:1px solid var(--line);border-radius:14px;padding:10px 16px;background:#fff;display:flex;flex-direction:column;align-items:center;min-width:150px;text-align:center}
 .fbox b{font-size:1.5rem;line-height:1.1}.fbox span{font-size:.82rem;font-weight:700}.fbox small{font-size:.7rem;color:var(--muted);margin-top:2px}
@@ -514,7 +519,6 @@ function personasView(v){
   var assigned=rowsBy.reduce(function(a,x){return a+x.length;},0),un=all.length-assigned;
   var L=outcomeList(all);
   var big=[],map=rowsBy.map(function(x,i){if(x.length>=5){big.push(i);return big.length-1;}return -1;});
-  var hMain;
   var asgK=asg.map(function(a){return a<0?-1:map[a];}),kK=big.length;
   var res=[];L.forEach(function(o){if(opt.skip&&opt.skip.test(o.id))return;var t=kK>1?kwTest(o.vals,asgK,kK):null;if(t){res.push({o:o,t:t});}});
   var m=res.length,srt=res.slice().sort(function(a,b){return a.t.p-b.t.p;}),minq=1;
@@ -533,54 +537,26 @@ function personasView(v){
   var unr0=all.filter(function(r,j){return asg[j]<0;}),nNo=ST.rows.filter(function(r){return P(r).screened_out;}).length,nFast=ST.rows.filter(tooFast).length,nAb=ST.rows.filter(function(r){return abroad(r)&&!tooFast(r);}).length;
   var h='<h2>Personas</h2>'+personaFunnel(ST.rows.length,nNo,nFast,nAb,all.length,assigned,unr0.length);
   if(opt.k==="best"){
-    h+=personaSlide(opt,rowsBy,stat,assigned);var hMain=h;
-    var TG=30,unr=all.filter(function(r,j){return asg[j]<0;}),tot={n:0,o:0,m:0};
-    h+='<div class="card" style="margin-bottom:14px"><h3>How many answers fit each persona</h3><p class="note">Target: '+TG+' people per persona. “To collect” is how many more are needed.</p><div class="tablewrap"><table><thead><tr><th>Persona</th><th>In the survey</th><th>Of which other places</th><th>Target</th><th>To collect</th><th>Status</th></tr></thead><tbody>';
-    opt.groups.forEach(function(g,gi){var rs=rowsBy[gi],o=rs.filter(function(r){return placeOf(r)===OTHER;}).length,miss=Math.max(0,TG-rs.length);tot.n+=rs.length;tot.o+=o;tot.m+=miss;
-      h+='<tr><td><b>'+esc(g.k)+'</b></td><td>'+rs.length+'</td><td>'+o+'</td><td>'+TG+'</td><td'+(miss?' style="font-weight:700;color:#a15c00"':'')+'>'+miss+'</td><td style="color:'+stat[gi].c+';font-weight:700">'+stat[gi].t+'</td></tr>';});
-    h+='<tr><td><b>Total in a persona</b></td><td><b>'+tot.n+'</b></td><td><b>'+tot.o+'</b></td><td>'+(TG*opt.groups.length)+'</td><td><b>'+tot.m+'</b></td><td></td></tr>';
-    h+='<tr><td><b>Fit none</b></td><td><b>'+unr.length+'</b></td><td>'+unr.filter(function(r){return placeOf(r)===OTHER;}).length+'</td><td></td><td></td><td><small>'+(unr.length?persShare(unr,function(r){return P(r).travelled_with_last_visit||"No answer";},4):'-')+'</small></td></tr>';
-    h+='<tr><td><b>All complete responses</b></td><td><b>'+all.length+'</b></td><td></td><td></td><td></td><td></td></tr></tbody></table></div><p class="note">Statuses come from the tests below. Interviews should focus on the personas with a number in “To collect”, mainly Friends, sport and golf and Couple.</p></div>';
+    h+=personaSlide(opt,rowsBy,stat,assigned);
   }
-  var covHtml=(typeof hMain==="string")?h.slice(hMain.length):"";if(typeof hMain==="string")h=hMain;
-  h+='<details class="sec"><summary>Details and statistical tests <small>(for the team)</small></summary>'+covHtml;
-  h+='<div class="card" style="margin-bottom:14px"><h3>'+esc(opt.name)+'</h3><p class="note">'+esc(opt.desc)+'</p><div class="stl">'+opt.groups.map(function(g,gi){return '<p><b>'+esc(g.k)+'</b> (n='+rowsBy[gi].length+'): <span style="font-weight:700;color:'+stat[gi].c+'">'+stat[gi].t+'</span> <small>'+esc(stat[gi].w)+'</small>'+(stat[gi].t!=="Validated"&&g.recruit?'<br><small><i>To validate: '+esc(g.recruit)+'</i></small>':'')+'</p>';}).join("")+'</div><p class="note"><b>Check:</b> '+assigned+' assigned'+(un?' + '+un+' not assigned':'')+' = '+all.length+' complete responses, each in exactly one group.</p>'+
-   '<p class="note"><b>Does the split matter?</b> '+m+' answers compared across the groups'+(opt.skipNote?' (leaving out '+opt.skipNote+')':'')+'. <b>'+sig.length+'</b> differ at p below 0.05 (about '+Math.round(m*0.05)+' would by chance), and <b>'+sigq.length+'</b> survive the correction for many tests. Tests are Kruskal-Wallis on '+all.length+' people; the effect is the epsilon squared (0.01 small, 0.06 medium, 0.14 large).</p>';
-  if(sig.length){
-    h+='<div class="tablewrap"><table><thead><tr><th>Answer</th><th>Type</th>'+opt.groups.map(function(g){return '<th>'+esc(g.k)+'</th>';}).join("")+'<th>p</th><th>Effect</th><th>Strength</th></tr></thead><tbody>';
-    sig.slice(0,14).forEach(function(x){var ms=rowsBy.map(function(rs){var idx=rs.map(function(r){return all.indexOf(r);});return mean(idx.map(function(i){return x.o.vals[i];}));});
-      var mx=Math.max.apply(null,ms.filter(function(a){return a!=null;}));
-      h+='<tr><td>'+esc(x.o.label)+'<br><small>'+esc(x.o.scale)+'</small></td><td>'+esc(x.o.sec)+'</td>'+ms.map(function(a){return '<td'+(a===mx?' style="background:rgba(212,160,23,.4);font-weight:700"':'')+'>'+(a==null?"-":a.toFixed(2))+'</td>';}).join("")+'<td>'+(x.t.p<0.001?"<0.001":x.t.p.toFixed(3))+'</td><td>'+x.t.eps.toFixed(2)+'</td><td>'+(x.q<0.05?'<b>solid</b>':x.q<0.15?'hint':'weak')+'</td></tr>';});
-    h+='</tbody></table></div><p class="note" style="margin-top:6px">Gold = the group with the highest value. “Solid” survives the correction for many tests; “hint” and “weak” do not, so read them as tendencies to confirm with more responses.</p>';
-  }else h+='<p class="empty">No answers differ clearly across these groups.</p>';
-  h+='</div><div class="grid cards">';
-  opt.groups.forEach(function(g,gi){
-    var rs=rowsBy[gi],n=rs.length;
-    h+='<div class="card pers" id="pc'+gi+'" style="border-left:4px solid '+stat[gi].c+'"><div class="ph"><h3>'+esc(g.k)+'</h3><span class="tag" style="color:'+stat[gi].c+'">'+stat[gi].t+' · n='+n+'</span></div><p class="note"><b>Rule:</b> '+esc(g.rule)+'</p>'+(g.voice?'<p class="voice">“'+esc(g.voice)+'” <small>(team hypothesis)</small></p>':'');
-    if(!n){h+='<p class="empty">No data.</p></div>';return;}
-    var up=[],dn=[];sig.forEach(function(x){var ids=rs.map(function(r){return all.indexOf(r);}),oth=[];all.forEach(function(r,j){if(asg[j]>-1&&asg[j]!==gi)oth.push(x.o.vals[j]);});
-      var a=mean(ids.map(function(i){return x.o.vals[i];})),b=mean(oth);if(a==null||b==null)return;var sd=Math.max(0.01,(Math.max.apply(null,x.o.vals.filter(function(z){return z!=null;}))-Math.min.apply(null,x.o.vals.filter(function(z){return z!=null;})))/4);
-      (a>b?up:dn).push({l:x.o.label,a:a,b:b,z:Math.abs(a-b)/sd,q:x.q});});
-    up.sort(function(a,b){return b.z-a.z;});dn.sort(function(a,b){return b.z-a.z;});
-    function li(arr){return arr.slice(0,3).map(function(x){return '<li>'+esc(x.l)+' <small>'+x.a.toFixed(2)+' vs '+x.b.toFixed(2)+(x.q<0.05?' · solid':'')+'</small></li>';}).join("");}
-    if(n<5){up=[];dn=[];}
-    h+='<p class="pt">Stands out (versus the other groups)</p>'+(n<5?'<p class="ps">Too few people to compare. Needs the golfer interviews.</p>':(up.length||dn.length)?'<ul class="pn">'+(up.length?'<li><b>Higher</b></li>'+li(up):'')+(dn.length?'<li><b>Lower</b></li>'+li(dn):'')+'</ul>':'<p class="ps">Nothing clear yet.</p>');
-    h+='<p class="pt">Who they are</p><p class="ps">Age: '+persShare(rs,function(r){return P(r).age;},3)+'<br>Travelled with: '+persShare(rs,function(r){return P(r).travelled_with_last_visit;},3)+'<br>Visits: '+persShare(rs,function(r){return P(r).frequency;},2)+'<br>Entry point: '+persShare(rs,function(r){var e=P(r).entry_point;return e==="other"?"Something else":e;},5)+(rs.some(function(r){return P(r).travelled_with_last_visit==="Family";})?'<br>Family: '+persShare(rs.filter(function(r){return P(r).travelled_with_last_visit==="Family";}),famComp,3):'')+'<br><b>Traits:</b> would pay premium (hotel in January €111 to €150 or more) <b>'+pct(rs.filter(function(r){return jan(r)>=2;}).length,n)+'%</b> · sport, golf or marina in top 3 <b>'+pct(rs.filter(actInt).length,n)+'%</b></p>';
-    h+=persList("What mattered most (average points)",persPts(rs,function(r){return P(r).vertical_rank;}));
-    h+=persList("Mechanisms",persPts(rs,function(r){return P(r).mechanism_rank;}));
-    h+=persList("Benefits",persPts(rs,function(r){return P(r).benefit_rank;}));
-    h+='<p class="pt">What they would pay (position in the Algarve market)</p>'+persWtp(rs);
-    h+='<p class="pt">Programme they would build</p><p class="ps">Type: '+persShare(rs,function(r){return P(r).program_type;},3)+'<br>Annual fee: '+persShare(rs,function(r){return P(r).fee_band;},2)+'<br>Activities: '+persShare(rs,function(r){return P(r).cross_use;},2)+'<br>Reach: '+persShare(rs,function(r){return P(r).geo_reach;},3)+'</p>';
-    if(g.partners)h+='<p class="pt">Partner ideas <span class="hyp">hypothesis from the team, not from the data</span></p><ul class="pn">'+g.partners.map(function(x){return '<li>'+esc(x)+'</li>';}).join("")+'</ul>';
-    h+='</div>';});
-  h+='</div>';
-  h+='<div class="card" style="margin-top:14px"><h3>What is missing to be sure</h3><p class="note">The smallest difference we can reliably detect between one group and the rest (in standard deviations; 0.2 small, 0.5 medium, 0.8 large). Each extra response lowers it. Today, and after +10 responses in that group:</p><div class="tablewrap"><table><thead><tr><th>Group</th><th>n now</th><th>Smallest difference detectable now</th><th>After +10</th><th>Responses in the group to detect a medium difference (0.5)</th></tr></thead><tbody>';
-  opt.groups.forEach(function(g,gi){var n=rowsBy[gi].length,N=assigned;var need=1/(Math.pow(0.5/2.8,2)-1/Math.max(1,N-n));var needTxt=need>0&&isFinite(need)?Math.max(0,Math.ceil(need)-n):"many";
-    h+='<tr><td>'+esc(g.k)+'</td><td>'+n+'</td><td>'+dmin(n,N).toFixed(2)+'</td><td>'+dmin(n+10,N+10).toFixed(2)+'</td><td>'+(needTxt===0?'enough':needTxt==="many"?'many':'about '+needTxt+' more')+'</td></tr>';});
-  h+='</tbody></table></div></div>';
+  var tierCol=["#F3EBDA","#E6D6B0","#D6C08A","#C4A765","#8D7036"];
+  function tierBar(rs,q){var ans=rs.map(function(r){return q.lab.indexOf(P(r)[q.f]);}).filter(function(i){return i>-1;}),n=ans.length;
+    if(!n)return '<span class="empty">no answers</span>';
+    var seg=q.lab.map(function(_,i){var c=ans.filter(function(x){return x===i;}).length,p=c/n*100;return '<span class="tseg" style="width:'+p+'%;background:'+tierCol[i]+(i===4?';color:#fff':'')+'" title="'+TIERS[i]+' '+Math.round(p)+'%">'+(p>=13?Math.round(p)+'%':'')+'</span>';}).join("");
+    return '<div class="tbar">'+seg+'</div><small class="tn">n='+n+'</small>';}
+  var pay='<div class="card" style="margin-bottom:14px"><h3>What they would pay</h3><p class="note">Share of each persona’s answers in each market price tier. It shows where people would pay. It does not label the persona.</p><div class="tleg">'+TIERS.map(function(t,i){return '<span><i style="background:'+tierCol[i]+'"></i>'+t+'</span>';}).join("")+'</div><div class="tablewrap"><table class="paytb"><thead><tr><th></th><th>Hotel night, January</th><th>Hotel night, August</th><th>Dinner per person</th></tr></thead><tbody>'+opt.groups.map(function(g,gi){return '<tr><td><b>'+esc(g.k)+'</b></td>'+WTPQ.map(function(q){return '<td>'+tierBar(rowsBy[gi],q)+'</td>';}).join("")+'</tr>';}).join("")+'</tbody></table></div></div>';
+  function sureWord(t){return t==="Validated"?"Clear pattern":t==="Partly supported"?"Tendencies":t==="To validate"?"Needs more people":"No clear pattern";}
+  var sd='<div class="card"><h3>What stands out, and how sure we are</h3><p class="note">Compared with the other four personas. Method in Methodology, Data analysis.</p><div class="tablewrap"><table class="paytb"><thead><tr><th></th><th>People</th><th>To reach 30</th><th>Higher than the others</th><th>Lower than the others</th><th>How sure</th></tr></thead><tbody>'+
+   opt.groups.map(function(g,gi){var rs=rowsBy[gi],n=rs.length,ids=rs.map(function(r){return all.indexOf(r);}),up=[],dn=[];
+    if(n>=5)sig.forEach(function(x){var oth=[];all.forEach(function(r,j){if(asg[j]>-1&&asg[j]!==gi)oth.push(x.o.vals[j]);});
+      var a=mean(ids.map(function(i){return x.o.vals[i];})),b=mean(oth);if(a==null||b==null)return;var vs=x.o.vals.filter(function(z){return z!=null;}),sdv=Math.max(0.01,(Math.max.apply(null,vs)-Math.min.apply(null,vs))/4);(a>b?up:dn).push({l:x.o.label,z:Math.abs(a-b)/sdv});});
+    up.sort(function(p,q){return q.z-p.z;});dn.sort(function(p,q){return q.z-p.z;});
+    function names(arr){return arr.slice(0,2).map(function(x){return esc(x.l);}).join("<br>")||"-";}
+    return '<tr><td><b>'+esc(g.k)+'</b></td><td>'+n+'</td><td>'+Math.max(0,30-n)+'</td><td>'+(n<5?"too few people":names(up))+'</td><td>'+(n<5?"too few people":names(dn))+'</td><td>'+sureWord(stat[gi].t)+'</td></tr>';}).join("")+'</tbody></table></div></div>';
+  h+='<details class="sec"><summary>Price tiers and what stands out <small>(for the team)</small></summary>'+pay+sd;
   h+='</details>';
   v.innerHTML=h;
-  Array.prototype.forEach.call(v.querySelectorAll("[data-pc]"),function(c){c.onclick=function(){var d=v.querySelector("details.sec");if(d)d.open=true;var t=v.querySelector("#pc"+c.getAttribute("data-pc"));if(t)t.scrollIntoView({behavior:"smooth",block:"start"});};});
+  Array.prototype.forEach.call(v.querySelectorAll("[data-pc]"),function(c){c.onclick=function(){var d=v.querySelector("details.sec");if(d)d.open=true;var t=v.querySelector("#pc"+c.getAttribute("data-pc"));(t||d||c).scrollIntoView({behavior:"smooth",block:"start"});};});
   Array.prototype.forEach.call(v.querySelectorAll("[data-po]"),function(b){b.onclick=function(){ST.persOpt=b.getAttribute("data-po");paint();};});
 }
 function persPts(rows,get){
@@ -793,7 +769,7 @@ function personaSlide(opt,rowsBy,stat,assigned){
      '<p class="pt">Benefits</p><ol class="pl3">'+names(rs,"benefit_rank")+'</ol>'+
      '<p class="pt">Programme they prefer</p><p class="ps">'+mode(rs,function(r){return P(r).program_type;})+'</p>'+
      '<p class="pt">Hotel night in January</p><p class="ps">'+mode(rs,function(r){return P(r).wtp_hotel_jan_double_two_breakfast;})+'</p></div>';});
-  return h+'</div><p class="note" style="margin-top:8px">Click a persona for its full card and the tests.</p>';
+  return h+'</div><p class="note" style="margin-top:8px">Click a persona to open the price tiers and what stands out, below.</p>';
 }
 function compareCard(opt,rowsBy,stat){
   var G=opt.groups,rows=[];
