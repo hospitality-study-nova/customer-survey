@@ -401,22 +401,24 @@ function segmentsView(v){
 var AGEP=function(a){return a==="18 to 24"?"18 to 24":(a==="55 to 64"||a==="65 or older")?"55 or older":a?"25 to 54":null;};
 function entryP(r){var p=P(r),e=p.entry_point;if(e==="other"){var t=String(p.entry_point_other||"").toLowerCase();if(/hotel e praia/.test(t))return "Beach";return "Other motives";}
   if(e==="Beach")return "Beach";if(e==="Nightlife")return "Nightlife";if(e==="Hotel"||e==="Nature and wellness")return "Hotel and wellness";return e?"Other motives":null;}
+function golfFocus(r){var p=P(r),S=["Golf","Sports","Marina"];if(S.indexOf(p.entry_point)>-1)return true;var v=cleanRank(p.vertical_rank);return S.some(function(x){var i=v.indexOf(x);return i>-1&&i<3;});}
+function famComp(r){var g=P(r).family_group||[];return g.indexOf("Children under 12")>-1?"Children under 12":g.indexOf("Teenagers aged 12 to 17")>-1?"Teenagers 12 to 17":"Adults only";}
 function actInt(r){var v=cleanRank(P(r).vertical_rank);return ["Golf","Sports","Marina"].some(function(x){var i=v.indexOf(x);return i>-1&&i<3;});}
 function jan(r){return WTPQ[0].lab.indexOf(P(r)[WTPQ[0].f]);}
 var POPTS=[
- {k:"best",name:"Best set (5 personas)",
-  desc:"Who the person travelled with, and only for families a second split, so the groups do not overlap: families are split by interest in sport, golf or marina (any of them in the top 3 of what mattered most), then by age. Friends and couples are too few to split. Premium (would pay more) and sport interest are traits shown inside every persona, not personas. The number of personas is not fixed: each is labelled validated, partly supported or still to validate.",
-  skip:/^(V_Golf|V_Sports|V_Marina)/,skipNote:"the golf, sports and marina rankings, which define the family sport group",
-  groups:[{k:"Family, sport",rule:"Travelled with family, and golf, sports or marina is in their top 3 of what mattered most",test:function(r){return P(r).travelled_with_last_visit==="Family"&&actInt(r);},
-    recruit:"Interview 10 or more families where someone plays golf, padel, tennis or sails (include golf families)."},
-   {k:"Family, young adults",rule:"Travelled with family, no sport interest, aged 18 to 24",test:function(r){return P(r).travelled_with_last_visit==="Family"&&!actInt(r)&&AGEP(P(r).age)==="18 to 24";},
-    recruit:"Ask 3 to 5 who pays and decides the trip, to confirm they are the beneficiaries."},
-   {k:"Family, adults",rule:"Travelled with family, no sport interest, aged 25 or over",test:function(r){return P(r).travelled_with_last_visit==="Family"&&!actInt(r)&&!!P(r).age&&AGEP(P(r).age)!=="18 to 24";},
-    recruit:"Interview 10 more parents, half with children under 12."},
-   {k:"Friends",rule:"Travelled with friends or a club",test:function(r){var w=P(r).travelled_with_last_visit;return w==="With friends"||w==="With a club or similar";},
+ {k:"best",name:"Main personas (5)",
+  desc:"Who the person travelled with, then one split where the data or the interviews call for it: friends are split between leisure (beach, nightlife) and sport and golf (golf, padel, tennis, marina), because golfers seem to travel with friends; families are split by age (young adults with their parents against adults, who decide and pay). Couples stay together and the card shows what brings them. Premium (would pay more) and sport interest are traits shown inside every persona. The number of personas is not fixed: each is labelled validated, partly supported or still to validate.",
+  skip:/^V_(Golf|Sports|Marina)$/,skipNote:"the golf, sports and marina rankings, which define Friends, sport and golf",
+  groups:[{k:"Friends, leisure",rule:"Travelled with friends or a club, and golf, sports and marina are not their main reason or top 3",test:function(r){var w=P(r).travelled_with_last_visit;return (w==="With friends"||w==="With a club or similar")&&!golfFocus(r);},
     recruit:"Add 5 groups of friends aged 25 or over, to see if the pattern holds for adults."},
+   {k:"Friends, sport and golf",rule:"Travelled with friends or a club, and golf, sports or marina is the entry point or in their top 3",test:function(r){var w=P(r).travelled_with_last_visit;return (w==="With friends"||w==="With a club or similar")&&golfFocus(r);},
+    recruit:"Interview 12 or more golfers and sport players who travel with friends (golf, padel, tennis, sailing). Ask who they usually travel with."},
    {k:"Couple",rule:"Travelled as a couple",test:function(r){return P(r).travelled_with_last_visit==="As a couple";},
-    recruit:"Interview 10 to 15 couples aged 25 or over."}]},
+    recruit:"Interview 10 or more couples aged 25 or over."},
+   {k:"Family, young adults",rule:"Travelled with family, aged 18 to 24",test:function(r){return P(r).travelled_with_last_visit==="Family"&&AGEP(P(r).age)==="18 to 24";},
+    recruit:"Ask 3 to 5 who pays and decides the trip, to confirm they are the beneficiaries."},
+   {k:"Family, adults",rule:"Travelled with family, aged 25 or over",test:function(r){return P(r).travelled_with_last_visit==="Family"&&!!P(r).age&&AGEP(P(r).age)!=="18 to 24";},
+    recruit:"Interview 10 more parents, half with children under 12, and a few golf families."}]},
  {k:"tier",name:"Price and programme tier",
   desc:"Formed from what people would pay and how broad a programme they want. Clustering of these answers found three stable groups; the simple rules below reproduce them with about 90% accuracy and cover everyone.",
   skip:/^(wtp_|prog|geo|cross)/,skipNote:"the price and programme answers, which define the groups",
@@ -480,7 +482,9 @@ function personasView(v){
   var rowsBy=opt.groups.map(function(g,i){return all.filter(function(r,j){return asg[j]===i;});});
   var assigned=rowsBy.reduce(function(a,x){return a+x.length;},0),un=all.length-assigned;
   var L=outcomeList(all);
-  var res=[];L.forEach(function(o){if(opt.skip&&opt.skip.test(o.id))return;var t=kwTest(o.vals,asg,k);if(t){res.push({o:o,t:t});}});
+  var big=[],map=rowsBy.map(function(x,i){if(x.length>=5){big.push(i);return big.length-1;}return -1;});
+  var asgK=asg.map(function(a){return a<0?-1:map[a];}),kK=big.length;
+  var res=[];L.forEach(function(o){if(opt.skip&&opt.skip.test(o.id))return;var t=kK>1?kwTest(o.vals,asgK,kK):null;if(t){res.push({o:o,t:t});}});
   var m=res.length,srt=res.slice().sort(function(a,b){return a.t.p-b.t.p;}),minq=1;
   for(var i=m-1;i>=0;i--){minq=Math.min(minq,srt[i].t.p*m/(i+1));srt[i].q=Math.min(1,minq);}
   var sig=srt.filter(function(x){return x.t.p<0.05;}),sigq=srt.filter(function(x){return x.q<0.05;});
@@ -493,7 +497,17 @@ function personasView(v){
     if(s.s>0)return {t:"Validated",c:"#1d7a3a",w:s.s+" clear difference(s) from the others, "+s.h+" at p below 0.05"};
     if(s.h>0)return {t:"Partly supported",c:"#7a6a1d",w:s.h+" tendency(ies) at p below 0.05, not yet solid after correction"};
     return {t:"No clear difference yet",c:"#666",w:"does not stand out from the others on these answers"};});
-  var h='<h2>Personas</h2><div class="filters" style="gap:6px">'+POPTS.map(function(o){return '<button class="btn sm'+(o.k===opt.k?' pri':'')+'" data-po="'+o.k+'">'+esc(o.name)+'</button>';}).join("")+'</div>';
+  function pb(o){return '<button class="btn sm'+(o.k===opt.k?' pri':'')+'" data-po="'+o.k+'">'+esc(o.name)+'</button>';}
+  var h='<h2>Personas</h2><div class="filters" style="gap:6px">'+pb(POPTS[0])+'<span class="tag" style="margin-left:10px">Old personas (other ways to cut the same data):</span>'+POPTS.slice(1).map(pb).join("")+'</div>';
+  if(opt.k==="best"){
+    var TG=30,unr=all.filter(function(r,j){return asg[j]<0;}),tot={n:0,o:0,m:0};
+    h+='<div class="card" style="margin-bottom:14px"><h3>How many answers fit each persona</h3><p class="note">Every complete response counts once, wherever it came from: people who named a place outside our five also count if they fit. Target = '+TG+' people per persona, the minimum to tell a medium-sized difference from chance. “To collect” is how many interviews are still missing to reach it.</p><div class="tablewrap"><table><thead><tr><th>Persona</th><th>In the survey</th><th>Of which other places</th><th>Target</th><th>To collect</th><th>Status</th></tr></thead><tbody>';
+    opt.groups.forEach(function(g,gi){var rs=rowsBy[gi],o=rs.filter(function(r){return placeOf(r)===OTHER;}).length,miss=Math.max(0,TG-rs.length);tot.n+=rs.length;tot.o+=o;tot.m+=miss;
+      h+='<tr><td><b>'+esc(g.k)+'</b></td><td>'+rs.length+'</td><td>'+o+'</td><td>'+TG+'</td><td'+(miss?' style="font-weight:700;color:#a15c00"':'')+'>'+miss+'</td><td style="color:'+stat[gi].c+';font-weight:700">'+stat[gi].t+'</td></tr>';});
+    h+='<tr><td><b>Total in a persona</b></td><td><b>'+tot.n+'</b></td><td><b>'+tot.o+'</b></td><td>'+(TG*opt.groups.length)+'</td><td><b>'+tot.m+'</b></td><td></td></tr>';
+    h+='<tr><td><b>Fit none</b></td><td><b>'+unr.length+'</b></td><td>'+unr.filter(function(r){return placeOf(r)===OTHER;}).length+'</td><td></td><td></td><td><small>'+(unr.length?persShare(unr,function(r){return P(r).travelled_with_last_visit||"No answer";},4):'-')+'</small></td></tr>';
+    h+='<tr><td><b>All complete responses</b></td><td><b>'+all.length+'</b></td><td></td><td></td><td></td><td></td></tr></tbody></table></div><p class="note">Statuses come from the tests below. Interviews should focus on the personas with a number in “To collect”, mainly Friends, sport and golf and Couple.</p></div>';
+  }
   h+='<div class="card" style="margin-bottom:14px"><h3>'+esc(opt.name)+'</h3><p class="note">'+esc(opt.desc)+'</p><div class="stl">'+opt.groups.map(function(g,gi){return '<p><b>'+esc(g.k)+'</b> (n='+rowsBy[gi].length+'): <span style="font-weight:700;color:'+stat[gi].c+'">'+stat[gi].t+'</span> <small>'+esc(stat[gi].w)+'</small>'+(stat[gi].t!=="Validated"&&g.recruit?'<br><small><i>To validate: '+esc(g.recruit)+'</i></small>':'')+'</p>';}).join("")+'</div><p class="note"><b>Check:</b> '+assigned+' assigned'+(un?' + '+un+' not assigned':'')+' = '+all.length+' complete responses, each in exactly one group.</p>'+
    '<p class="note"><b>Does the split matter?</b> '+m+' answers compared across the groups'+(opt.skipNote?' (leaving out '+opt.skipNote+')':'')+'. <b>'+sig.length+'</b> differ at p below 0.05 (about '+Math.round(m*0.05)+' would by chance), and <b>'+sigq.length+'</b> survive the correction for many tests. Tests are Kruskal-Wallis on '+all.length+' people; the effect is the epsilon squared (0.01 small, 0.06 medium, 0.14 large).</p>';
   if(sig.length){
@@ -513,8 +527,9 @@ function personasView(v){
       (a>b?up:dn).push({l:x.o.label,a:a,b:b,z:Math.abs(a-b)/sd,q:x.q});});
     up.sort(function(a,b){return b.z-a.z;});dn.sort(function(a,b){return b.z-a.z;});
     function li(arr){return arr.slice(0,3).map(function(x){return '<li>'+esc(x.l)+' <small>'+x.a.toFixed(2)+' vs '+x.b.toFixed(2)+(x.q<0.05?' · solid':'')+'</small></li>';}).join("");}
-    h+='<p class="pt">Stands out (versus the other groups)</p>'+((up.length||dn.length)?'<ul class="pn">'+(up.length?'<li><b>Higher</b></li>'+li(up):'')+(dn.length?'<li><b>Lower</b></li>'+li(dn):'')+'</ul>':'<p class="ps">Nothing clear yet.</p>');
-    h+='<p class="pt">Who they are</p><p class="ps">Age: '+persShare(rs,function(r){return P(r).age;},3)+'<br>Travelled with: '+persShare(rs,function(r){return P(r).travelled_with_last_visit;},3)+'<br>Visits: '+persShare(rs,function(r){return P(r).frequency;},2)+'<br>Entry point: '+persShare(rs,function(r){var e=P(r).entry_point;return e==="other"?"Something else":e;},3)+'<br><b>Traits:</b> would pay premium (hotel in January €111 to €150 or more) <b>'+pct(rs.filter(function(r){return jan(r)>=2;}).length,n)+'%</b> · sport, golf or marina in top 3 <b>'+pct(rs.filter(actInt).length,n)+'%</b></p>';
+    if(n<5){up=[];dn=[];}
+    h+='<p class="pt">Stands out (versus the other groups)</p>'+(n<5?'<p class="ps">Too few people to compare. Needs the golfer interviews.</p>':(up.length||dn.length)?'<ul class="pn">'+(up.length?'<li><b>Higher</b></li>'+li(up):'')+(dn.length?'<li><b>Lower</b></li>'+li(dn):'')+'</ul>':'<p class="ps">Nothing clear yet.</p>');
+    h+='<p class="pt">Who they are</p><p class="ps">Age: '+persShare(rs,function(r){return P(r).age;},3)+'<br>Travelled with: '+persShare(rs,function(r){return P(r).travelled_with_last_visit;},3)+'<br>Visits: '+persShare(rs,function(r){return P(r).frequency;},2)+'<br>Entry point: '+persShare(rs,function(r){var e=P(r).entry_point;return e==="other"?"Something else":e;},5)+(rs.some(function(r){return P(r).travelled_with_last_visit==="Family";})?'<br>Family: '+persShare(rs.filter(function(r){return P(r).travelled_with_last_visit==="Family";}),famComp,3):'')+'<br><b>Traits:</b> would pay premium (hotel in January €111 to €150 or more) <b>'+pct(rs.filter(function(r){return jan(r)>=2;}).length,n)+'%</b> · sport, golf or marina in top 3 <b>'+pct(rs.filter(actInt).length,n)+'%</b></p>';
     h+=persList("What mattered most (average points)",persPts(rs,function(r){return P(r).vertical_rank;}));
     h+=persList("Mechanisms",persPts(rs,function(r){return P(r).mechanism_rank;}));
     h+=persList("Benefits",persPts(rs,function(r){return P(r).benefit_rank;}));
