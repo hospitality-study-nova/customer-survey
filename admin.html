@@ -80,9 +80,15 @@ details>summary::before{content:"\25B8";display:inline-block;margin-right:6px;co
 details[open]>summary::before{content:"\25BE"}
 .card.pers{display:flex;flex-direction:column}
 .ph{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}.ph h3{margin:0;font-size:1.05rem}
+.funnel{display:flex;align-items:stretch;justify-content:center;gap:6px;flex-wrap:wrap;margin:6px 0 16px}
+.fbox{border:1px solid var(--line);border-radius:14px;padding:10px 16px;background:#fff;display:flex;flex-direction:column;align-items:center;min-width:150px;text-align:center}
+.fbox b{font-size:1.5rem;line-height:1.1}.fbox span{font-size:.82rem;font-weight:700}.fbox small{font-size:.7rem;color:var(--muted);margin-top:2px}
+.fbox.main{background:#F3EBDA;border-color:#AE8C44}
+.farr{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);min-width:90px}.farr small{font-size:.68rem;margin-top:2px;text-align:center}
+.picon{display:block;margin:0 0 6px}
 .pgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
 @media(max-width:1100px){.pgrid{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}}
-.pcol{border:1px solid var(--line);border-radius:14px;padding:12px 12px 10px;background:#fff;cursor:pointer;font-size:.8rem;line-height:1.35}
+.pcol{border-top:4px solid #AE8C44;border:1px solid var(--line);border-top:4px solid #AE8C44;border-radius:14px;padding:12px 12px 10px;background:#fff;cursor:pointer;font-size:.8rem;line-height:1.35}
 .pcol:hover{border-color:var(--muted)}
 .pcol h3{margin:0;font-size:.95rem}
 .pcol .pst{margin:2px 0 4px;font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.04em}
@@ -508,6 +514,7 @@ function personasView(v){
   var assigned=rowsBy.reduce(function(a,x){return a+x.length;},0),un=all.length-assigned;
   var L=outcomeList(all);
   var big=[],map=rowsBy.map(function(x,i){if(x.length>=5){big.push(i);return big.length-1;}return -1;});
+  var hMain;
   var asgK=asg.map(function(a){return a<0?-1:map[a];}),kK=big.length;
   var res=[];L.forEach(function(o){if(opt.skip&&opt.skip.test(o.id))return;var t=kK>1?kwTest(o.vals,asgK,kK):null;if(t){res.push({o:o,t:t});}});
   var m=res.length,srt=res.slice().sort(function(a,b){return a.t.p-b.t.p;}),minq=1;
@@ -523,10 +530,10 @@ function personasView(v){
     if(s.h>0)return {t:"Partly supported",c:"#7a6a1d",w:s.h+" tendency(ies) at p below 0.05, not yet solid after correction"};
     return {t:"No clear difference yet",c:"#666",w:"does not stand out from the others on these answers"};});
   function pb(o){return '<button class="btn sm'+(o.k===opt.k?' pri':'')+'" data-po="'+o.k+'">'+esc(o.name)+'</button>';}
-  var unr0=all.filter(function(r,j){return asg[j]<0;}),nNo=ST.rows.filter(function(r){return P(r).screened_out;}).length,nFast=ST.rows.filter(tooFast).length,nAb=ST.rows.filter(abroad).length;
-  var h='<h2>Personas</h2><p class="note" style="margin-top:-6px">Five personas that do not overlap. <b>'+assigned+' of '+all.length+'</b> complete responses ('+pct(assigned,all.length)+'%) fit one; <b>'+unr0.length+'</b> ('+pct(unr0.length,all.length)+'%) fit none (for example people who travelled alone). Not counted at all: '+nNo+' with no holiday in the last 3 years, '+nFast+' who answered in under '+MIN_SECONDS+' seconds and '+nAb+' whose holiday place was outside Portugal.</p>';
+  var unr0=all.filter(function(r,j){return asg[j]<0;}),nNo=ST.rows.filter(function(r){return P(r).screened_out;}).length,nFast=ST.rows.filter(tooFast).length,nAb=ST.rows.filter(function(r){return abroad(r)&&!tooFast(r);}).length;
+  var h='<h2>Personas</h2>'+personaFunnel(ST.rows.length,nNo,nFast,nAb,all.length,assigned,unr0.length);
   if(opt.k==="best"){
-    h+=personaSlide(opt,rowsBy,stat,assigned);
+    h+=personaSlide(opt,rowsBy,stat,assigned);var hMain=h;
     var TG=30,unr=all.filter(function(r,j){return asg[j]<0;}),tot={n:0,o:0,m:0};
     h+='<div class="card" style="margin-bottom:14px"><h3>How many answers fit each persona</h3><p class="note">Target: '+TG+' people per persona. “To collect” is how many more are needed.</p><div class="tablewrap"><table><thead><tr><th>Persona</th><th>In the survey</th><th>Of which other places</th><th>Target</th><th>To collect</th><th>Status</th></tr></thead><tbody>';
     opt.groups.forEach(function(g,gi){var rs=rowsBy[gi],o=rs.filter(function(r){return placeOf(r)===OTHER;}).length,miss=Math.max(0,TG-rs.length);tot.n+=rs.length;tot.o+=o;tot.m+=miss;
@@ -535,7 +542,8 @@ function personasView(v){
     h+='<tr><td><b>Fit none</b></td><td><b>'+unr.length+'</b></td><td>'+unr.filter(function(r){return placeOf(r)===OTHER;}).length+'</td><td></td><td></td><td><small>'+(unr.length?persShare(unr,function(r){return P(r).travelled_with_last_visit||"No answer";},4):'-')+'</small></td></tr>';
     h+='<tr><td><b>All complete responses</b></td><td><b>'+all.length+'</b></td><td></td><td></td><td></td><td></td></tr></tbody></table></div><p class="note">Statuses come from the tests below. Interviews should focus on the personas with a number in “To collect”, mainly Friends, sport and golf and Couple.</p></div>';
   }
-  h+='<details class="sec"><summary>Details and statistical tests <small>(for the team)</small></summary>';
+  var covHtml=(typeof hMain==="string")?h.slice(hMain.length):"";if(typeof hMain==="string")h=hMain;
+  h+='<details class="sec"><summary>Details and statistical tests <small>(for the team)</small></summary>'+covHtml;
   h+='<div class="card" style="margin-bottom:14px"><h3>'+esc(opt.name)+'</h3><p class="note">'+esc(opt.desc)+'</p><div class="stl">'+opt.groups.map(function(g,gi){return '<p><b>'+esc(g.k)+'</b> (n='+rowsBy[gi].length+'): <span style="font-weight:700;color:'+stat[gi].c+'">'+stat[gi].t+'</span> <small>'+esc(stat[gi].w)+'</small>'+(stat[gi].t!=="Validated"&&g.recruit?'<br><small><i>To validate: '+esc(g.recruit)+'</i></small>':'')+'</p>';}).join("")+'</div><p class="note"><b>Check:</b> '+assigned+' assigned'+(un?' + '+un+' not assigned':'')+' = '+all.length+' complete responses, each in exactly one group.</p>'+
    '<p class="note"><b>Does the split matter?</b> '+m+' answers compared across the groups'+(opt.skipNote?' (leaving out '+opt.skipNote+')':'')+'. <b>'+sig.length+'</b> differ at p below 0.05 (about '+Math.round(m*0.05)+' would by chance), and <b>'+sigq.length+'</b> survive the correction for many tests. Tests are Kruskal-Wallis on '+all.length+' people; the effect is the epsilon squared (0.01 small, 0.06 medium, 0.14 large).</p>';
   if(sig.length){
@@ -752,13 +760,30 @@ function steeringView(v){
 }
 function topPts(rs,field,k){return persPts(rs,function(r){return P(r)[field];}).slice(0,k||3).map(function(x,i){return (i+1)+'. '+esc(x[0]);}).join("<br>")||"-";}
 function wtpP(rs,q){var v=rs.map(function(r){return wtpPct(q,P(r)[q.f]);}).filter(function(x){return x!=null;});return v.length?Math.round(mean(v)):null;}
+function personaFunnel(total,nNo,nFast,nAb,kept,assigned,none){
+  function box(n,t,sub,cls){return '<div class="fbox'+(cls?' '+cls:'')+'"><b>'+n+'</b><span>'+t+'</span>'+(sub?'<small>'+sub+'</small>':'')+'</div>';}
+  function arrow(t){return '<div class="farr"><svg viewBox="0 0 40 16" width="40" height="16"><path d="M1 8h32M27 2l7 6-7 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'+(t?'<small>'+t+'</small>':'')+'</div>';}
+  var ex=total-kept;
+  return '<div class="funnel">'+box(total,"responses received")+arrow(ex+" left out")+box(kept,"counted",nNo+" no holiday, "+nFast+" under "+MIN_SECONDS+" s, "+nAb+" holiday abroad")+arrow(none+" fit none")+box(assigned,"in one of the 5 personas",pct(assigned,kept)+"% of the counted","main")+'</div>';
+}
+function personaIcon(k){
+  var G="var(--gold,#AE8C44)",N="#B9BCC2";
+  function fig(x,y,h,c,extra){var r=h*.22,bw=h*.34;return '<circle cx="'+x+'" cy="'+(y+r)+'" r="'+r+'" fill="'+c+'"/><rect x="'+(x-bw/2)+'" y="'+(y+r*2+1)+'" width="'+bw+'" height="'+(h-r*2-1)+'" rx="'+(bw/2.4)+'" fill="'+c+'"/>'+(extra||"");}
+  var b="";
+  if(k==="Family, adults")b=fig(14,14,24,N)+fig(26,14,24,N)+fig(20,24,16,N)+fig(44,6,38,G);
+  else if(k==="Family, young adults")b=fig(12,6,34,N)+fig(24,6,34,N)+fig(18,22,18,N)+fig(44,14,28,G);
+  else if(k==="Couple")b=fig(18,8,34,G)+fig(36,8,34,G)+'<path d="M27 6c-2-3-6-1-5 2 1 2 5 5 5 5s4-3 5-5c1-3-3-5-5-2z" fill="#D95D5D" transform="translate(0,-2)"/>';
+  else if(k==="Friends, sport and golf")b=fig(14,8,34,G)+fig(30,8,34,G)+'<line x1="50" y1="4" x2="50" y2="40" stroke="#5E5E5E" stroke-width="2"/><path d="M50 4l12 5-12 5z" fill="#2E8B57"/><ellipse cx="50" cy="42" rx="8" ry="2.5" fill="#B9BCC2"/>';
+  else b=fig(14,8,34,G)+fig(30,8,34,G)+'<circle cx="54" cy="12" r="6" fill="#F2B84B"/><path d="M42 40q8-6 18 0" fill="none" stroke="#5BA7D6" stroke-width="2.5" stroke-linecap="round"/>';
+  return '<svg class="picon" viewBox="0 0 68 48" width="68" height="48" aria-hidden="true">'+b+'</svg>';
+}
 function personaSlide(opt,rowsBy,stat,assigned){
   function names(rs,field){return persPts(rs,function(r){return P(r)[field];}).slice(0,3).map(function(x,i){return '<li>'+esc(x[0])+'</li>';}).join("")||'<li>-</li>';}
   function top(rs,get,k){return persShare(rs,get,k);}
   function mode(rs,get){var t=tally(rs,get);return t.length?esc(t[0][0])+' <b>'+pct(t[0][1],rs.length)+'%</b>':"-";}
   var h='<div class="pgrid">';
   opt.groups.forEach(function(g,gi){var rs=rowsBy[gi],n=rs.length;
-    h+='<div class="pcol" data-pc="'+gi+'" style="border-top:5px solid '+stat[gi].c+'" tabindex="0"><h3>'+esc(g.k)+'</h3><p class="pst" style="color:'+stat[gi].c+'">'+stat[gi].t+'</p>'+
+    h+='<div class="pcol" data-pc="'+gi+'" tabindex="0">'+personaIcon(g.k)+'<h3>'+esc(g.k)+'</h3>'+
      '<p class="pn1"><b>'+n+'</b> people <small>('+pct(n,assigned)+'% of the sample)</small></p>'+
      '<p class="pt">Who</p><p class="ps">'+top(rs,function(r){return P(r).age;},2)+'</p>'+
      '<p class="pt">Why they go</p><p class="ps">'+top(rs,function(r){return entryP(r);},2)+'</p>'+
@@ -1005,7 +1030,7 @@ var METHOD_A=[
   "The number of personas is not fixed: after the interviews, groups can be merged or split if the data say so."]],
  ["How we validate a persona",[
   "Three simple checks. (1) A clear rule: anyone can be assigned to the persona by a simple rule. (2) Enough people: at least 20 in the persona. Below that the status is “To validate”. (3) A consistent pattern: at least one answer where the persona clearly differs from the other personas, by more than chance can explain.",
-  "Validated means all three checks are met. Partly supported means the pattern is there as a tendency but is not yet solid. A persona can be partly supported and still be kept: it can be a real and large group that resembles the average respondent, so no single answer stands out from the rest. To validate means too few people to conclude. No clear difference yet means nothing stands out.",
+  "On the Personas page the statuses are not shown on the main view; they are in the team details section below it. Validated means all three checks are met. Partly supported means the pattern is there as a tendency but is not yet solid. A persona can be partly supported and still be kept: it can be a real and large group that resembles the average respondent, so no single answer stands out from the rest. To validate means too few people to conclude. No clear difference yet means nothing stands out.",
   "Technical note. A pattern is tested for each answer with the Kruskal-Wallis test (it works with ranks, so it suits rankings and ordered price bands). Because about 30 answers are tested at once, p-values are adjusted with the Benjamini-Hochberg correction. An answer that still passes is marked “solid”.",
   "Limits. This is a convenience and snowball sample, young and mostly in summer, so the results compare groups and do not estimate the whole population. Validated means the pattern is clear in our data, not that the persona is proven in the population. The interviews with couples and golf and sport customers are the next step to confirm the smaller personas."]],
  ["Use of AI",[
