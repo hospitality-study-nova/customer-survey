@@ -553,10 +553,12 @@ function personasView(v){
     up.sort(function(p,q){return q.z-p.z;});dn.sort(function(p,q){return q.z-p.z;});
     function names(arr){return arr.slice(0,2).map(function(x){return esc(x.l);}).join("<br>")||"-";}
     return '<tr><td><b>'+esc(g.k)+'</b></td><td>'+n+'</td><td>'+Math.max(0,30-n)+'</td><td>'+(n<5?"too few people":names(up))+'</td><td>'+(n<5?"too few people":names(dn))+'</td><td>'+sureWord(stat[gi].t)+'</td></tr>';}).join("")+'</tbody></table></div></div>';
+  h+='<details class="sec"><summary>Charts for the Steering <small>(download as PNG, SVG or CSV)</small></summary><p class="note">Same format as the Steering charts. Every chart can be changed (type, colours, size) and downloaded.</p><div class="grid ccg">'+SPECS.filter(function(x){return x.sec==="6. Personas, for the Steering";}).map(function(x){return chartCard(x);}).join("")+'</div></details>';
   h+='<details class="sec"><summary>Price tiers and what stands out <small>(for the team)</small></summary>'+pay+sd;
   h+='</details>';
   v.innerHTML=h;
-  Array.prototype.forEach.call(v.querySelectorAll("[data-pc]"),function(c){c.onclick=function(){var d=v.querySelector("details.sec");if(d)d.open=true;var t=v.querySelector("#pc"+c.getAttribute("data-pc"));(t||d||c).scrollIntoView({behavior:"smooth",block:"start"});};});
+  ST.cx=personaCtx();Array.prototype.forEach.call(v.querySelectorAll(".cc"),function(c){bindChart(c);drawChart(c);});
+  Array.prototype.forEach.call(v.querySelectorAll("[data-pc]"),function(c){c.onclick=function(){var ds=v.querySelectorAll("details.sec"),d=ds[ds.length-1];if(d)d.open=true;var t=v.querySelector("#pc"+c.getAttribute("data-pc"));(t||d||c).scrollIntoView({behavior:"smooth",block:"start"});};});
   Array.prototype.forEach.call(v.querySelectorAll("[data-po]"),function(b){b.onclick=function(){ST.persOpt=b.getAttribute("data-po");paint();};});
 }
 function persPts(rows,get){
@@ -619,6 +621,21 @@ function scoreData(rows,field,c,byPersona){var items={};rows.forEach(function(r)
   cats.sort(function(a,b){var s=function(x){return sers.reduce(function(t,q){return t+q.vals[cats.indexOf(x)];},0);};return s(b)-s(a);});
   sers=sers.map(function(q){return {name:q.name,vals:cats.map(function(it){return q.vals[Object.keys(items).indexOf(it)];})};});
   return {cats:cats,sers:sers,unit:"score",n:rows.length,xl:"",yl:""};}
+var BSHORT={"Create an account":"Account","Quick sign-up with contact details":"Quick sign-up","Points for spending":"Points","Complete activities to earn rewards":"Activities","No preference (earn)":"No preference","Recognition over time":"Over time","Lifetime status levels":"Lifetime","Annual status levels":"Annual","One level is fine":"One level"};
+function top3Data(rows,field,c){var items={};rows.forEach(function(r){cleanRank(P(r)[field]).forEach(function(x){items[x]=1;});});
+  var cats=Object.keys(items),groups=POPTS[0].groups.map(function(g){return g.k;});
+  var sers=groups.map(function(g){var rs=rows.filter(function(r){return c.pm[r.session_id]===g&&cleanRank(P(r)[field]).length;});
+    return {name:g,vals:cats.map(function(it){return rs.length?Math.round(rs.filter(function(r){return cleanRank(P(r)[field]).slice(0,3).indexOf(it)>-1;}).length/rs.length*100):0;})};});
+  var idx=cats.map(function(_,i){return i;});idx.sort(function(a,b){var t=function(i){return sers.reduce(function(s,q){return s+q.vals[i];},0);};return t(b)-t(a);});
+  return {cats:idx.map(function(i){return cats[i];}),sers:sers.map(function(q){return {name:q.name,vals:idx.map(function(i){return q.vals[i];})};}),unit:"pctval",n:rows.length,xl:"",yl:""};}
+function bundleOf(r){var b=P(r).program_built;if(!b||!b.enter||!b.earn||!b.level_up)return null;var sh=function(x){return BSHORT[x]||x;};return sh(b.enter)+" + "+sh(b.earn)+" + "+sh(b.level_up);}
+function bundleData(rows,c){var cnt={};rows.forEach(function(r){var k=bundleOf(r);if(k)cnt[k]=(cnt[k]||0)+1;});
+  var cats=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]||(a<b?-1:1);}).slice(0,6),groups=POPTS[0].groups.map(function(g){return g.k;});
+  var sers=groups.map(function(g){var rs=rows.filter(function(r){return c.pm[r.session_id]===g&&bundleOf(r);});
+    return {name:g,vals:cats.map(function(k){return rs.length?Math.round(rs.filter(function(r){return bundleOf(r)===k;}).length/rs.length*100):0;})};});
+  return {cats:cats,sers:sers,unit:"pctval",n:rows.filter(bundleOf).length,xl:"",yl:""};}
+function tierWrap(k,qi){return function(rows,c){var d=crossData(rows,"persona",k,c);d.sers.forEach(function(x){var i=WTPQ[qi].lab.indexOf(x.name);if(i>-1)x.name=TIERS[i]+" ("+x.name+")";});return d;};}
+function personaCtx(){var all=complete(),asg=assignOpt(POPTS[0],all),pm={};all.forEach(function(r,j){pm[r.session_id]=asg[j]>-1?POPTS[0].groups[asg[j]].k:null;});return {rows:all,pm:pm,c:{pm:pm}};}
 var SPECS=[];
 function addS(sec,id,title,note,build,type){SPECS.push({sec:sec,id:id,title:title,note:note||"",build:build,type:type||"bar"});}
 function single(k){return function(rows,c){return crossData(rows,k,"none",c);};}
@@ -639,6 +656,15 @@ function cr(a,b){return function(rows,c){return crossData(rows,a,b,c);};}
  addS(S4,"k_ben","Benefits: rank score","100 = always ranked first, 0 = always last.",function(rows,c){return scoreData(rows,"benefit_rank",c,false);});
  addS(S4,"k_ben_p","Benefits by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"benefit_rank",c,true);},"column");
  [["prog","Programme type they would build"]].forEach(function(x){addS(S5,"p_"+x[0],x[1],"Share of respondents.",single(x[0]));});
+ var S6="6. Personas, for the Steering";
+ addS(S6,"pe_vert","What mattered most: share who put it in their top 3, by persona","% of each persona with the activity in their top 3 of 8.",function(rows,c){return top3Data(rows,"vertical_rank",c);},"column");
+ addS(S6,"pe_mech","Mechanisms: share who put it in their top 3, by persona","% of each persona with the mechanism in their top 3 of 9.",function(rows,c){return top3Data(rows,"mechanism_rank",c);},"column");
+ addS(S6,"pe_ben","Benefits: share who put it in their top 3, by persona","% of each persona with the benefit in their top 3 of 11.",function(rows,c){return top3Data(rows,"benefit_rank",c);},"column");
+ addS(S6,"pe_entry","Entry point by persona","% inside each persona.",cr("persona","entry"),"stack");
+ addS(S6,"pe_bundle","Most chosen bundles by persona","Bundle = how to enter + how to earn + how to level up. % of each persona. The six most frequent overall.",bundleData,"bar");
+ addS(S6,"pe_jan","Hotel in January by persona","% inside each persona, by price tier (Mass market to Luxury).",tierWrap("jan",0),"stack");
+ addS(S6,"pe_aug","Hotel in August by persona","% inside each persona, by price tier.",tierWrap("aug",1),"stack");
+ addS(S6,"pe_din","Dinner per person by persona","% inside each persona, by price tier.",tierWrap("din",2),"stack");
  addS(S5,"p_prog_pers","Programme type by persona","Share inside each persona.",cr("persona","prog"),"stack");
 })();
 function chartVals(d,o){var cat=d.cats.length,out=d.sers.map(function(s){return s.vals.slice();});
@@ -653,7 +679,7 @@ function renderChart(d,o,title){
   var pal=PAL[o.pal]||PAL.gold,W=o.size==="half"?480:720,type=o.type,fs=o.size==="half"?13:16;
   var cats=d.cats.map(function(x,i){return i;}),V=chartVals(d,o);
   if(o.sort==="desc"&&type!=="donut"){var tot=function(j){return V.reduce(function(a,s){return a+s[j];},0);};cats.sort(function(a,b){return tot(b)-tot(a);});}
-  var fmt=function(v){return o.mode==="pct"&&d.unit==="share"?Math.round(v)+"%":(d.unit==="score"?String(Math.round(v)):String(Math.round(v)));};
+  var fmt=function(v){return d.unit==="pctval"||(o.mode==="pct"&&d.unit==="share")?Math.round(v)+"%":(d.unit==="score"?String(Math.round(v)):String(Math.round(v)));};
   var multi=d.sers.length>1,g=[],H,titleH=o.showTitle?40:0,top=titleH+8;
   var txt=function(x,y,s,a,w,c,sz){return '<text x="'+x+'" y="'+y+'" font-family="'+CF+'" font-size="'+(sz||fs)+'" fill="'+(c||"#000000")+'" text-anchor="'+(a||"start")+'"'+(w?' font-weight="'+w+'"':'')+'>'+svgEsc(s)+'</text>';};
   var hlc=function(i,j){if(multi||!o.hl)return pal[i%pal.length];var v=V[0][j],gt=V[0].filter(function(z){return z>v;}).length;return gt<3?"#AE8C44":"#8A8A8C";};var legendH=0,leg="";
