@@ -142,7 +142,8 @@ if(!C.SUPABASE_URL||!C.SUPABASE_ANON_KEY||!window.supabase){
   app.innerHTML='<div class="login"><div class="card"><h3>Setup missing</h3><p class="msg">Fill in SUPABASE_URL and SUPABASE_ANON_KEY in config.js (see LEIA-ME.md).</p></div></div>';return;
 }
 var sb=window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-var ST={tab:"overview",rows:[],filter:"all",user:null,detail:null,loaded:false,err:null};
+function mem(k,v){try{if(v===undefined)return localStorage.getItem("adm_"+k);localStorage.setItem("adm_"+k,v);}catch(e){return null;}}
+var ST={tab:mem("tab")||"overview",mtab:mem("mtab")||undefined,rows:[],filter:"all",user:null,detail:null,loaded:false,err:null};
 
 /* ---------- questionnaire link ---------- */
 function formUrl(){return C.SITE_URL||new URL("./",location.href).href;}
@@ -197,7 +198,7 @@ function shell(){
   paint();
 }
 function paint(){
-  Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.classList.toggle("on",b.getAttribute("data-t")===ST.tab);});
+  Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.classList.toggle("on",b.getAttribute("data-t")===ST.tab);});mem("tab",ST.tab);mem("mtab",ST.mtab||"doing");
   var v=qs("#view");
   if(ST.err){v.innerHTML='<p class="msg bad">'+esc(ST.err)+'</p>';return;}
   if(ST.tab==="method"){methodView(v);return;}
@@ -1104,7 +1105,7 @@ var METHOD_A=[
   "Scoring: respondents only see positions 1, 2, 3… In the analysis each position is converted to points in reverse. First place gets as many points as there are items (8 for the activities, 9 for the mechanisms, 11 for the benefits) and last place gets 1. The overview shows the average points per item (higher is better) and the share who ranked it first. If someone adds their own reason to the activities (9 items), their points use their own list, so first place gets 9. Respondents never see points."]]
 ];
 function methodView(v){
-  var t=ST.mtab||"doing",A=t==="analysing",arr=A?METHOD_A:METHOD;
+  var t=ST.mtab||"doing";mem("mtab",t);var A=t==="analysing",arr=A?METHOD_A:METHOD;
   var h='<div class="doc"><h2>Methodology</h2><div class="filters" style="gap:6px"><button class="btn sm'+(!A?' pri':'')+'" data-mt="doing">Survey methodology</button><button class="btn sm'+(A?' pri':'')+'" data-mt="analysing">Data analysis</button></div>';
   if(!A)h+='<p class="msg" style="margin-top:-4px">Vera · 27 Oct 2026 · reviewed against the live survey on 2 Nov 2026</p>';
   arr.forEach(function(sec,i){h+='<section class="card"><h3>'+(i+1)+'. '+esc(sec[0])+'</h3><ul>'+sec[1].map(function(t){return '<li>'+esc(t)+'</li>';}).join("")+'</ul></section>';});
