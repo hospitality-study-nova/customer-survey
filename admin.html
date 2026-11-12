@@ -437,6 +437,14 @@ function segmentsView(v){
 var AGEP=function(a){return a==="18 to 24"?"18 to 24":(a==="55 to 64"||a==="65 or older")?"55 or older":a?"25 to 54":null;};
 function entryP(r){var p=P(r),e=p.entry_point;if(e==="other"){var t=String(p.entry_point_other||"").toLowerCase();if(/hotel e praia/.test(t))return "Beach";return "Other motives";}
   if(e==="Beach")return "Beach";if(e==="Nightlife")return "Nightlife";if(e==="Hotel"||e==="Nature and wellness")return "Hotel and wellness";return e?"Other motives":null;}
+function entryD(r){var p=P(r),e=p.entry_point;if(!e)return null;
+  if(e!=="other")return e==="Something else"?"Something else":e;
+  var t=norm(p.entry_point_other);
+  if(/hotel e praia/.test(t))return "Beach";
+  if(/casa|house|estadia/.test(t))return "Own or borrowed home";
+  if(/famil|visit|amigos/.test(t)&&!/city|cidade/.test(t))return "Visiting family and friends";
+  if(/cultura|city|cidade|sitio novo|passear|aventura|patrimonio/.test(t))return "Culture and exploring";
+  return "Something else";}
 function golfFocus(r){var p=P(r),S=["Golf","Sports","Marina"];if(S.indexOf(p.entry_point)>-1)return true;var v=cleanRank(p.vertical_rank);return S.some(function(x){var i=v.indexOf(x);return i>-1&&i<3;});}
 function famComp(r){var g=P(r).family_group||[];return g.indexOf("Children under 12")>-1?"Children under 12":g.indexOf("Teenagers aged 12 to 17")>-1?"Teenagers 12 to 17":"Adults only";}
 function actInt(r){var v=cleanRank(P(r).vertical_rank);return ["Golf","Sports","Marina"].some(function(x){var i=v.indexOf(x);return i>-1&&i<3;});}
@@ -596,7 +604,7 @@ var VARS={
  gender:{label:"Gender",get:function(r){return P(r).gender||null;},order:GENDER},
  res:{label:"Residence",get:resShort,order:["Portuguese, lives in Portugal","Portuguese, lives abroad","Not Portuguese, lives abroad"]},
  comp:{label:"Travelled with",get:function(r){return P(r).travelled_with_last_visit||null;}},
- entry:{label:"Entry point",get:function(r){return entryP(r)||null;}},
+ entry:{label:"Entry point (each motive)",get:function(r){return entryD(r);}},
  season:{label:"Season of last visit",get:function(r){return P(r).season_last_visit||null;},order:SEASONS},
  freq:{label:"Visits in the last years",get:function(r){return P(r).frequency||null;},order:FREQ},
  nights:{label:"Nights",get:function(r){return P(r).nights_last_visit||null;},order:NIGHTS},
@@ -622,12 +630,12 @@ function scoreData(rows,field,c,byPersona){var items={};rows.forEach(function(r)
   sers=sers.map(function(q){return {name:q.name,vals:cats.map(function(it){return q.vals[Object.keys(items).indexOf(it)];})};});
   return {cats:cats,sers:sers,unit:"score",n:rows.length,xl:"",yl:""};}
 var BSHORT={"Create an account":"Account","Quick sign-up with contact details":"Quick sign-up","Points for spending":"Points","Complete activities to earn rewards":"Activities","No preference (earn)":"No preference","Recognition over time":"Over time","Lifetime status levels":"Lifetime","Annual status levels":"Annual","One level is fine":"One level"};
-function top3Data(rows,field,c){var items={};rows.forEach(function(r){cleanRank(P(r)[field]).forEach(function(x){items[x]=1;});});
+function pointsData(rows,field,c){var items={};rows.forEach(function(r){cleanRank(P(r)[field]).forEach(function(x){items[x]=1;});});
   var cats=Object.keys(items),groups=POPTS[0].groups.map(function(g){return g.k;});
-  var sers=groups.map(function(g){var rs=rows.filter(function(r){return c.pm[r.session_id]===g&&cleanRank(P(r)[field]).length;});
-    return {name:g,vals:cats.map(function(it){return rs.length?Math.round(rs.filter(function(r){return cleanRank(P(r)[field]).slice(0,3).indexOf(it)>-1;}).length/rs.length*100):0;})};});
+  var sers=groups.map(function(g){var rs=rows.filter(function(r){return c.pm[r.session_id]===g;});
+    return {name:g,vals:cats.map(function(it){var v=[];rs.forEach(function(r){var a=cleanRank(P(r)[field]),i=a.indexOf(it);if(i>-1)v.push(a.length-i);});return v.length?Math.round(mean(v)*10)/10:0;})};});
   var idx=cats.map(function(_,i){return i;});idx.sort(function(a,b){var t=function(i){return sers.reduce(function(s,q){return s+q.vals[i];},0);};return t(b)-t(a);});
-  return {cats:idx.map(function(i){return cats[i];}),sers:sers.map(function(q){return {name:q.name,vals:idx.map(function(i){return q.vals[i];})};}),unit:"pctval",n:rows.length,xl:"",yl:""};}
+  return {cats:idx.map(function(i){return cats[i];}),sers:sers.map(function(q){return {name:q.name,vals:idx.map(function(i){return q.vals[i];})};}),unit:"points",n:rows.length,xl:"",yl:""};}
 function bundleOf(r){var b=P(r).program_built;if(!b||!b.enter||!b.earn||!b.level_up)return null;var sh=function(x){return BSHORT[x]||x;};return sh(b.enter)+" + "+sh(b.earn)+" + "+sh(b.level_up);}
 function bundleData(rows,c){var cnt={};rows.forEach(function(r){var k=bundleOf(r);if(k)cnt[k]=(cnt[k]||0)+1;});
   var cats=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]||(a<b?-1:1);}).slice(0,6),groups=POPTS[0].groups.map(function(g){return g.k;});
@@ -657,10 +665,10 @@ function cr(a,b){return function(rows,c){return crossData(rows,a,b,c);};}
  addS(S4,"k_ben_p","Benefits by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"benefit_rank",c,true);},"bar");
  [["prog","Programme type they would build"]].forEach(function(x){addS(S5,"p_"+x[0],x[1],"Share of respondents.",single(x[0]));});
  var S6="6. Personas, for the Steering";
- addS(S6,"pe_vert","What mattered most: share who put it in their top 3, by persona","% of each persona with the activity in their top 3 of 8.",function(rows,c){return top3Data(rows,"vertical_rank",c);},"bar");
- addS(S6,"pe_mech","Mechanisms: share who put it in their top 3, by persona","% of each persona with the mechanism in their top 3 of 9.",function(rows,c){return top3Data(rows,"mechanism_rank",c);},"bar");
- addS(S6,"pe_ben","Benefits: share who put it in their top 3, by persona","% of each persona with the benefit in their top 3 of 11.",function(rows,c){return top3Data(rows,"benefit_rank",c);},"bar");
- addS(S6,"pe_entry","Entry point by persona","% inside each persona.",cr("persona","entry"),"stack");
+ addS(S6,"pe_vert","What mattered most: average points by persona","Average points: 1st place gets 8 points, last place 1. Higher = ranked higher.",function(rows,c){return pointsData(rows,"vertical_rank",c);},"bar");
+ addS(S6,"pe_mech","Mechanisms: average points by persona","Average points: 1st place gets 9 points, last place 1. Higher = ranked higher.",function(rows,c){return pointsData(rows,"mechanism_rank",c);},"bar");
+ addS(S6,"pe_ben","Benefits: average points by persona","Average points: 1st place gets 11 points, last place 1. Higher = ranked higher.",function(rows,c){return pointsData(rows,"benefit_rank",c);},"bar");
+ addS(S6,"pe_entry","Entry point by persona","% of each persona for whom it is the main reason to go. Adds up to 100% in each bar.",cr("persona","entry"),"stack");
  addS(S6,"pe_bundle","Most chosen bundles by persona","Bundle = how to enter + how to earn + how to level up. % of each persona. The six most frequent overall.",bundleData,"bar");
  addS(S6,"pe_jan","Hotel in January by persona","% inside each persona, by price tier (Mass market to Luxury).",tierWrap("jan",0),"stack");
  addS(S6,"pe_aug","Hotel in August by persona","% inside each persona, by price tier.",tierWrap("aug",1),"stack");
@@ -679,7 +687,7 @@ function renderChart(d,o,title){
   var pal=PAL[o.pal]||PAL.gold,W=o.size==="half"?480:720,type=o.type,fs=o.size==="half"?13:16;
   var cats=d.cats.map(function(x,i){return i;}),V=chartVals(d,o);
   if(o.sort==="desc"&&type!=="donut"){var tot=function(j){return V.reduce(function(a,s){return a+s[j];},0);};cats.sort(function(a,b){return tot(b)-tot(a);});}
-  var fmt=function(v){return d.unit==="pctval"||(o.mode==="pct"&&d.unit==="share")?Math.round(v)+"%":(d.unit==="score"?String(Math.round(v)):String(Math.round(v)));};
+  var fmt=function(v){if(d.unit==="points")return (Math.round(v*10)/10).toFixed(1);return d.unit==="pctval"||(o.mode==="pct"&&d.unit==="share")?Math.round(v)+"%":(d.unit==="score"?String(Math.round(v)):String(Math.round(v)));};
   var multi=d.sers.length>1,g=[],H,titleH=o.showTitle?40:0,top=titleH+8,fb=false;
   if(type==="column"&&((multi&&cats.length*d.sers.length>24)||(!multi&&cats.length>12))){type="bar";fb=true;}
   var txt=function(x,y,s,a,w,c,sz){return '<text x="'+x+'" y="'+y+'" font-family="'+CF+'" font-size="'+(sz||fs)+'" fill="'+(c||"#000000")+'" text-anchor="'+(a||"start")+'"'+(w?' font-weight="'+w+'"':'')+'>'+svgEsc(s)+'</text>';};
@@ -789,7 +797,7 @@ function personaSlide(opt,rowsBy,stat,assigned){
     h+='<div class="pcol" data-pc="'+gi+'" tabindex="0">'+personaIcon(g.k)+'<h3>'+esc(g.k)+'</h3>'+
      '<p class="pn1"><b>'+n+'</b> people <small>('+pct(n,assigned)+'% of the sample)</small></p>'+
      '<p class="pt">Who</p><p class="ps">'+top(rs,function(r){return P(r).age;},2)+'</p>'+
-     '<p class="pt">Why they go</p><p class="ps">'+top(rs,function(r){return entryP(r);},2)+'</p>'+
+     '<p class="pt">Why they go</p><p class="ps">'+top(rs,function(r){return entryD(r);},2)+'</p>'+
      '<p class="pt">Where</p><p class="ps">'+top(rs,function(r){return placeOf(r);},2)+'</p>'+
      '<p class="pt">What they value most</p><ol class="pl3">'+names(rs,"vertical_rank")+'</ol>'+
      '<p class="pt">Mechanisms</p><ol class="pl3">'+names(rs,"mechanism_rank")+'</ol>'+
