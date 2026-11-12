@@ -552,16 +552,33 @@ function personasView(v){
     if(!n)return '<span class="empty">no answers</span>';
     var seg=q.lab.map(function(_,i){var c=ans.filter(function(x){return x===i;}).length,p=c/n*100;return '<span class="tseg" style="width:'+p+'%;background:'+tierCol[i]+(i===4?';color:#fff':'')+'" title="'+TIERS[i]+' '+Math.round(p)+'%">'+(p>=13?Math.round(p)+'%':'')+'</span>';}).join("");
     return '<div class="tbar">'+seg+'</div><small class="tn">n='+n+'</small>';}
-  var PRICE_IDS=["pe_jan","pe_aug","pe_din","pe_mech_tier","pe_ben_tier"];
-  function allIdx(rs){var a=[];rs.forEach(function(r){WTPQ.forEach(function(q){var i=q.lab.indexOf(P(r)[q.f]);if(i>-1)a.push(i);});});return a;}
-  function med(a){if(!a.length)return null;var b=a.slice().sort(function(x,y){return x-y;}),m=Math.floor(b.length/2);return b.length%2?b[m]:Math.round((b[m-1]+b[m])/2);}
-  function hiPct(a){return a.length?Math.round(a.filter(function(i){return i>=2;}).length/a.length*100):null;}
-  var inP=all.filter(function(r,j){return asg[j]>-1;}),baseHi=hiPct(allIdx(inP)),baseMed=med(allIdx(inP));
-  var pos='<div class="card" style="margin-bottom:14px"><h3>Price position of each persona</h3><p class="note">All price answers of the persona together (hotel in January, hotel in August and dinner), each placed in its market tier. “Typical tier” is the middle answer. “High and above” is the share of answers in High, Premium or Luxury. The comparison is with all five personas together. It describes where people would pay, it does not label the persona.</p><div class="tablewrap"><table class="paytb"><thead><tr><th></th><th>Typical tier</th><th>High and above</th><th>All personas</th><th>Compared with the sample</th></tr></thead><tbody>'+
-   opt.groups.map(function(g,gi){var rs=rowsBy[gi],a=allIdx(rs),hp=hiPct(a),m=med(a),d=(hp==null||baseHi==null)?null:hp-baseHi;
-     var w=d==null?"-":(d>=8?"Leans higher":d<=-8?"Leans lower":"In line");if(rs.length<20&&d!=null)w+=" (small group, read with care)";
-     return '<tr><td><b>'+esc(g.k)+'</b></td><td>'+(m==null?"-":TIERS[m])+'</td><td>'+(hp==null?"-":hp+"%")+'</td><td>'+(baseHi==null?"-":baseHi+"% (typical: "+TIERS[baseMed]+")")+'</td><td>'+w+'</td></tr>';}).join("")+'</tbody></table></div><p class="note" style="margin-top:6px">Rule of thumb: “leans higher” or “lower” means 8 points or more away from the sample. It is a reading aid, not a statistical test.</p></div>';
-  var pay=pos+'<div class="grid ccg">'+SPECS.filter(function(x){return PRICE_IDS.indexOf(x.id)>-1;}).map(function(x){return chartCard(x);}).join("")+'</div>';
+  var PRICE_IDS=["pe_mix","pe_jan","pe_aug","pe_din","pe_mech_tier","pe_ben_tier"];
+  function tsc(r){var q=WTPQ.map(function(x){var i=x.lab.indexOf(P(r)[x.f]);return i>-1?i+1:null;}),h=[q[0],q[1]].filter(function(v){return v!=null;}),o={h:h.length?mean(h):null,d:q[2],a:null};var al=q.filter(function(v){return v!=null;});o.a=al.length?mean(al):null;o.tail=al.length?al.filter(function(v){return v>=4;}).length/al.length:null;o.low=al.length?al.filter(function(v){return v<=2;}).length/al.length:null;return o;}
+  function agg(rs,k){var v=rs.map(function(r){return tsc(r)[k];}).filter(function(x){return x!=null;}),m=v.length?mean(v):null,sd=v.length>1?Math.sqrt(v.reduce(function(t,x){return t+(x-m)*(x-m);},0)/(v.length-1)):0;return {n:v.length,m:m,se:v.length>1?sd/Math.sqrt(v.length):null};}
+  var inP=all.filter(function(r,j){return asg[j]>-1;}),B={h:agg(inP,"h"),d:agg(inP,"d"),a:agg(inP,"a")};
+  var PP=opt.groups.map(function(g,gi){var rs=rowsBy[gi];return {k:g.k,n:rs.length,h:agg(rs,"h"),d:agg(rs,"d"),a:agg(rs,"a"),tail:agg(rs,"tail"),low:agg(rs,"low")};});
+  function sg(x,b){return x.m==null?"":(x.m-b.m>=0?"+":"")+(x.m-b.m).toFixed(1);}
+  function rd(x,b){if(x.m==null||x.se==null)return "-";var t=1.96*x.se,d=x.m-b.m;return d>t?"Tends higher":d<-t?"Tends lower":"In line";}
+  var pos='<div class="card" style="margin-bottom:14px"><h3>Price position of each persona, compared with the sample</h3><p class="note">Each answer is placed in its tier (1 = Mass market, 3 = High, 5 = Luxury). The tiers come from five equal slices of real market prices, so 3 is the middle of the market. Numbers are the persona average and the difference to the average of all five personas together. “Tends higher” or “lower” only when the difference is larger than the uncertainty (about 2 standard errors); otherwise “In line”. Small groups are marked.</p><div class="tablewrap"><table class="paytb"><thead><tr><th></th><th>People</th><th>Hotel</th><th>Dinner</th><th>Overall</th><th>Premium or Luxury</th><th>Mass or Mid</th><th>Reading</th></tr></thead><tbody>'+
+   PP.map(function(p){var w=rd(p.a,B.a);if(p.n<20)w+=" (small group)";
+     return '<tr><td><b>'+esc(p.k)+'</b></td><td>'+p.n+'</td><td>'+(p.h.m==null?"-":p.h.m.toFixed(1)+" ("+sg(p.h,B.h)+")")+'</td><td>'+(p.d.m==null?"-":p.d.m.toFixed(1)+" ("+sg(p.d,B.d)+")")+'</td><td><b>'+(p.a.m==null?"-":p.a.m.toFixed(1)+" ("+sg(p.a,B.a)+")")+'</b></td><td>'+(p.tail.m==null?"-":Math.round(p.tail.m*100)+"%")+'</td><td>'+(p.low.m==null?"-":Math.round(p.low.m*100)+"%")+'</td><td>'+w+'</td></tr>';}).join("")+
+   '<tr><td><i>All five together</i></td><td>'+inP.length+'</td><td>'+(B.h.m==null?"-":B.h.m.toFixed(1))+'</td><td>'+(B.d.m==null?"-":B.d.m.toFixed(1))+'</td><td><b>'+(B.a.m==null?"-":B.a.m.toFixed(1))+'</b></td><td></td><td></td><td></td></tr></tbody></table></div></div>';
+  function matrixSvg(){var pts=PP.filter(function(p){return p.h.m!=null&&p.d.m!=null;});if(!pts.length||B.h.m==null)return "";
+    var xs=[],ys=[];pts.forEach(function(p){var ex=1.96*(p.h.se||0),ey=1.96*(p.d.se||0);xs.push(p.h.m-ex,p.h.m+ex);ys.push(p.d.m-ey,p.d.m+ey);});
+    var x0=Math.max(1,Math.floor((Math.min.apply(null,xs)-0.1)*4)/4),x1=Math.min(5,Math.ceil((Math.max.apply(null,xs)+0.1)*4)/4),y0=Math.max(1,Math.floor((Math.min.apply(null,ys)-0.1)*4)/4),y1=Math.min(5,Math.ceil((Math.max.apply(null,ys)+0.1)*4)/4);
+    if(x1-x0<0.8){x0=Math.max(1,B.h.m-0.5);x1=Math.min(5,B.h.m+0.5);}if(y1-y0<0.8){y0=Math.max(1,B.d.m-0.5);y1=Math.min(5,B.d.m+0.5);}
+    var W=640,H=460,L=70,R=20,T=24,Bt=64,X=function(v){return L+(v-x0)/(x1-x0)*(W-L-R);},Y=function(v){return H-Bt-(v-y0)/(y1-y0)*(H-T-Bt);},g=[];
+    g.push('<rect x="'+L+'" y="'+T+'" width="'+(W-L-R)+'" height="'+(H-T-Bt)+'" fill="#FAF7F0"/>');
+    g.push('<line x1="'+X(B.h.m)+'" y1="'+T+'" x2="'+X(B.h.m)+'" y2="'+(H-Bt)+'" stroke="#8A8A8C" stroke-dasharray="5 4"/><line x1="'+L+'" y1="'+Y(B.d.m)+'" x2="'+(W-R)+'" y2="'+Y(B.d.m)+'" stroke="#8A8A8C" stroke-dasharray="5 4"/>');
+    g.push('<text x="'+(W-R-6)+'" y="'+(T+16)+'" text-anchor="end" font-size="12" fill="#8A8A8C">Higher on hotel and dinner</text><text x="'+(L+6)+'" y="'+(H-Bt-8)+'" font-size="12" fill="#8A8A8C">Lower on hotel and dinner</text>');
+    pts.forEach(function(p){var cx=X(p.h.m),cy=Y(p.d.m),ex=1.96*(p.h.se||0)/(x1-x0)*(W-L-R),ey=1.96*(p.d.se||0)/(y1-y0)*(H-T-Bt);
+      g.push('<line x1="'+(cx-ex)+'" y1="'+cy+'" x2="'+(cx+ex)+'" y2="'+cy+'" stroke="#AE8C44" stroke-opacity=".45" stroke-width="3"/><line x1="'+cx+'" y1="'+(cy-ey)+'" x2="'+cx+'" y2="'+(cy+ey)+'" stroke="#AE8C44" stroke-opacity=".45" stroke-width="3"/>');
+      g.push('<circle cx="'+cx+'" cy="'+cy+'" r="9" fill="#AE8C44" stroke="#fff" stroke-width="2"/><text x="'+(cx+13)+'" y="'+(cy-11)+'" font-size="13" font-weight="700" fill="#2E2E2E">'+esc(p.k)+' ('+p.n+')</text>');});
+    [0,1,2,3,4].forEach(function(i){var vx=x0+(x1-x0)*i/4,vy=y0+(y1-y0)*i/4;g.push('<text x="'+X(vx)+'" y="'+(H-Bt+18)+'" text-anchor="middle" font-size="12" fill="#5E5E5E">'+vx.toFixed(1)+'</text><text x="'+(L-8)+'" y="'+(Y(vy)+4)+'" text-anchor="end" font-size="12" fill="#5E5E5E">'+vy.toFixed(1)+'</text>');});
+    g.push('<text x="'+(L+(W-L-R)/2)+'" y="'+(H-14)+'" text-anchor="middle" font-size="13" fill="#2E2E2E">Hotel night, average tier (1 Mass market to 5 Luxury)</text><text transform="translate(16 '+(T+(H-T-Bt)/2)+') rotate(-90)" text-anchor="middle" font-size="13" fill="#2E2E2E">Dinner, average tier</text>');
+    return '<svg id="posmx" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:'+W+'px;font-family:Aptos,Calibri,Arial,sans-serif"><rect width="'+W+'" height="'+H+'" fill="#fff"/>'+g.join("")+'</svg>';}
+  var mx='<div class="card" style="margin-bottom:14px"><h3>Positioning matrix</h3><p class="note">Dashed lines are the average of all five personas. Bars show the uncertainty (about 2 standard errors): the wider the bar, the fewer people behind the point. Points that overlap the dashed lines are not clearly different from the sample.</p>'+matrixSvg()+'<div class="cctb" style="margin-top:8px"><button class="btn" id="mxsvg">Download SVG</button></div></div>';
+  var pay=pos+mx+'<div class="grid ccg">'+SPECS.filter(function(x){return PRICE_IDS.indexOf(x.id)>-1;}).map(function(x){return chartCard(x);}).join("")+'</div>';
   function sureWord(t){return t==="Validated"?"Clear pattern":t==="Partly supported"?"Tendencies":t==="To validate"?"Needs more people":"No clear pattern";}
   var sd='<div class="card"><h3>What stands out, and how sure we are</h3><p class="note">Compared with the other four personas. Method in Methodology, Data analysis.</p><div class="tablewrap"><table class="paytb"><thead><tr><th></th><th>People</th><th>To reach 30</th><th>Higher than the others</th><th>Lower than the others</th><th>How sure</th></tr></thead><tbody>'+
    opt.groups.map(function(g,gi){var rs=rowsBy[gi],n=rs.length,ids=rs.map(function(r){return all.indexOf(r);}),up=[],dn=[];
@@ -570,11 +587,11 @@ function personasView(v){
     up.sort(function(p,q){return q.z-p.z;});dn.sort(function(p,q){return q.z-p.z;});
     function names(arr){return arr.slice(0,2).map(function(x){return esc(x.l);}).join("<br>")||"-";}
     return '<tr><td><b>'+esc(g.k)+'</b></td><td>'+n+'</td><td>'+Math.max(0,30-n)+'</td><td>'+(n<5?"too few people":names(up))+'</td><td>'+(n<5?"too few people":names(dn))+'</td><td>'+sureWord(stat[gi].t)+'</td></tr>';}).join("")+'</tbody></table></div></div>';
-  h+='<details class="sec"><summary>Charts for the Steering <small>(download as PNG, SVG or CSV)</small></summary><p class="note">Same format as the Steering charts. Every chart can be changed (type, colours, size) and downloaded.</p><div class="grid ccg">'+SPECS.filter(function(x){return x.sec==="6. Personas, for the Steering"&&["pe_jan","pe_aug","pe_din","pe_mech_tier","pe_ben_tier"].indexOf(x.id)<0;}).map(function(x){return chartCard(x);}).join("")+'</div></details>';
+  h+='<details class="sec"><summary>Charts for the Steering <small>(download as PNG, SVG or CSV)</small></summary><p class="note">Same format as the Steering charts. Every chart can be changed (type, colours, size) and downloaded.</p><div class="grid ccg">'+SPECS.filter(function(x){return x.sec==="6. Personas, for the Steering"&&["pe_mix","pe_jan","pe_aug","pe_din","pe_mech_tier","pe_ben_tier"].indexOf(x.id)<0;}).map(function(x){return chartCard(x);}).join("")+'</div></details>';
   h+='<details class="sec"><summary>Price positioning and what stands out <small>(for the team)</small></summary>'+pay+sd;
   h+='</details>';
   v.innerHTML=h;
-  ST.cx=personaCtx();Array.prototype.forEach.call(v.querySelectorAll(".cc"),function(c){bindChart(c);drawChart(c);});
+  ST.cx=personaCtx();Array.prototype.forEach.call(v.querySelectorAll(".cc"),function(c){bindChart(c);drawChart(c);});var mb=qs("#mxsvg"),ms=qs("#posmx");if(mb&&ms)mb.onclick=function(){var u=URL.createObjectURL(new Blob([ms.outerHTML],{type:"image/svg+xml"})),a=document.createElement("a");a.href=u;a.download="positioning-matrix.svg";document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(u);},500);};
   Array.prototype.forEach.call(v.querySelectorAll("[data-pc]"),function(c){c.onclick=function(){var ds=v.querySelectorAll("details.sec"),d=ds[ds.length-1];if(d)d.open=true;var t=v.querySelector("#pc"+c.getAttribute("data-pc"));(t||d||c).scrollIntoView({behavior:"smooth",block:"start"});};});
   Array.prototype.forEach.call(v.querySelectorAll("[data-po]"),function(b){b.onclick=function(){ST.persOpt=b.getAttribute("data-po");paint();};});
 }
@@ -687,12 +704,14 @@ function cr(a,b){return function(rows,c){return crossData(rows,a,b,c);};}
  addS(S6,"pe_ben_tier","Benefits by price tier: average points","Price tier = what they would pay for a hotel night in January. Average points: 1st place gets 11 points, last place 1. Shows whether the benefits change with price.",function(rows){return tierPointsData(rows,"benefit_rank");},"bar");
  addS(S6,"pe_entry","Entry point by persona","% of each persona for whom it is the main reason to go. Adds up to 100% in each bar.",cr("persona","entry"),"stack");
  addS(S6,"pe_bundle","Most chosen bundles by persona","Bundle = how to enter + how to earn + how to level up. % of each persona. The six most frequent overall.",bundleData,"bar");
+ addS(S6,"pe_mix","Price mix inside each persona","% of all price answers (hotel in January, hotel in August, dinner) by tier, inside each persona.",function(rows,c){var gs=POPTS[0].groups.map(function(g){return g.k;}),cnt=TIERS.map(function(){return gs.map(function(){return 0;});}),n=0;rows.forEach(function(r){var gi=gs.indexOf(c.pm[r.session_id]);if(gi<0)return;WTPQ.forEach(function(q){var i=q.lab.indexOf(P(r)[q.f]);if(i>-1){cnt[i][gi]++;n++;}});});return {cats:gs,sers:TIERS.map(function(t,i){return {name:t,vals:cnt[i]};}),unit:"share",n:n,xl:"",yl:""};},"stack");
  addS(S6,"pe_jan","Hotel in January by persona","% inside each persona, by price tier (Mass market to Luxury).",tierWrap("jan",0),"stack");
  addS(S6,"pe_aug","Hotel in August by persona","% inside each persona, by price tier.",tierWrap("aug",1),"stack");
  addS(S6,"pe_din","Dinner per person by persona","% inside each persona, by price tier.",tierWrap("din",2),"stack");
  addS(S5,"p_prog_pers","Programme type by persona","Share inside each persona.",cr("persona","prog"),"stack");
 })();
 ["k_vert_p","k_mech_p","k_ben_p","pe_vert","pe_mech","pe_ben","pe_bundle"].forEach(function(id){var x=SPECS.filter(function(y){return y.id===id;})[0];if(x)x.pers=true;});
+["k_vert_p","k_mech_p","k_ben_p","pe_vert","pe_mech","pe_ben","pe_bundle","pe_mix","pe_jan","pe_aug","pe_din","pe_mech_tier","pe_ben_tier","pe_entry"].forEach(function(id){var x=SPECS.filter(function(y){return y.id===id;})[0];if(x)x.tab=true;});
 function chartVals(d,o){var cat=d.cats.length,out=d.sers.map(function(s){return s.vals.slice();});
   if(d.unit==="share"&&o.mode==="pct"){
     if(d.sers.length>1){for(var j=0;j<cat;j++){var t=0;d.sers.forEach(function(s){t+=s.vals[j];});d.sers.forEach(function(s,i){out[i][j]=t?s.vals[j]/t*100:0;});}}
@@ -747,7 +766,7 @@ function renderChart(d,o,title){
   var head=o.showTitle?txt(20,26,title,"start","700","#000000",fs+5):"";
   var note='';
   return {svg:'<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+(o.bg?'<rect width="100%" height="100%" fill="'+o.bg+'"/>':"")+head+g.join("")+'</svg>',w:W,h:H,fb:fb};}
-function chartState(id,spec){ST.cs=ST.cs||{};var s=ST.cs[id];if(!s){s=ST.cs[id]={type:spec.type,mode:"pct",labels:true,pal:spec.pers?"grey":"gold",size:"full",sort:"none",title:spec.title,showTitle:false,hl:true,pv:"all"};}return s;}
+function chartState(id,spec){ST.cs=ST.cs||{};var s=ST.cs[id];if(!s){s=ST.cs[id]={type:spec.tab?"table":spec.type,mode:"pct",labels:true,pal:spec.pers?"grey":"gold",size:"full",sort:"none",title:spec.title,showTitle:false,hl:true,pv:"all"};}return s;}
 function chartCtx(){var all=complete(),asg=assignOpt(POPTS[0],all),pm={};all.forEach(function(r,j){pm[r.session_id]=asg[j]>-1?POPTS[0].groups[asg[j]].k:null;});
   var f=ST.sf||(ST.sf={place:"all",pers:"all"}),rows=all.filter(function(r){return (f.place==="all"||placeOf(r)===f.place)&&(f.pers==="all"||pm[r.session_id]===f.pers);});return {rows:rows,pm:pm,c:{pm:pm}};}
 function chartData(spec,cx,s){var d=spec.build(cx.rows,cx.c);
