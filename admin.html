@@ -143,7 +143,7 @@ if(!C.SUPABASE_URL||!C.SUPABASE_ANON_KEY||!window.supabase){
 }
 var sb=window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 function mem(k,v){try{if(v===undefined)return localStorage.getItem("adm_"+k);localStorage.setItem("adm_"+k,v);}catch(e){return null;}}
-var ST={tab:mem("tab")||"overview",mtab:mem("mtab")||undefined,rows:[],filter:"all",user:null,detail:null,loaded:false,err:null};
+var ST={tab:mem("tab")||"overview",mtab:mem("mtab")||undefined,psub:mem("psub")||"overview",rows:[],filter:"all",user:null,detail:null,loaded:false,err:null};
 
 /* ---------- questionnaire link ---------- */
 function formUrl(){return C.SITE_URL||new URL("./",location.href).href;}
@@ -588,12 +588,16 @@ function personasView(v){
     up.sort(function(p,q){return q.z-p.z;});dn.sort(function(p,q){return q.z-p.z;});
     function names(arr){return arr.slice(0,2).map(function(x){return esc(x.l);}).join("<br>")||"-";}
     return '<tr><td><b>'+esc(g.k)+'</b></td><td>'+n+'</td><td>'+Math.max(0,30-n)+'</td><td>'+(n<5?"too few people":names(up))+'</td><td>'+(n<5?"too few people":names(dn))+'</td><td>'+sureWord(stat[gi].t)+'</td></tr>';}).join("")+'</tbody></table></div></div>';
-  h+='<details class="sec"><summary>Charts for the Steering <small>(download as PNG, SVG or CSV)</small></summary><p class="note">Same format as the Steering charts. Every chart can be changed (type, colours, size) and downloaded.</p><div class="grid ccg">'+SPECS.filter(function(x){return x.sec==="6. Personas, for the Steering"&&["pe_mix","pe_jan","pe_aug","pe_din","pe_mech_tier","pe_ben_tier"].indexOf(x.id)<0;}).map(function(x){return chartCard(x);}).join("")+'</div></details>';
-  h+='<details class="sec"><summary>Price positioning and what stands out <small>(for the team)</small></summary>'+pay+sd;
-  h+='</details>';
+  var sub=ST.psub||"overview",tabs=[["overview","Overview"],["price","Price positioning"],["charts","Charts for the Steering"],["stands","What stands out"]];
+  if(!tabs.some(function(x){return x[0]===sub;}))sub="overview";
+  var nav='<div class="filters" style="gap:6px;margin:6px 0 14px">'+tabs.map(function(x){return '<button class="btn sm'+(x[0]===sub?' pri':'')+'" data-ps="'+x[0]+'">'+x[1]+'</button>';}).join("")+'</div>';
+  var chartsHtml='<p class="note">Same format as the Steering charts. Every chart can be changed (type, colours, size) and downloaded as PNG, SVG or CSV.</p><div class="grid ccg">'+SPECS.filter(function(x){return x.sec==="6. Personas, for the Steering"&&["pe_mix","pe_jan","pe_aug","pe_din","pe_mech_tier","pe_ben_tier"].indexOf(x.id)<0;}).map(function(x){return chartCard(x);}).join("")+'</div>';
+  var ov=h.slice('<h2>Personas</h2>'.length);
+  h='<h2>Personas</h2>'+nav+(sub==="price"?pay:sub==="charts"?chartsHtml:sub==="stands"?sd:ov);
   v.innerHTML=h;
   ST.cx=personaCtx();Array.prototype.forEach.call(v.querySelectorAll(".cc"),function(c){bindChart(c);drawChart(c);});var mb=qs("#mxsvg"),ms=qs("#posmx");if(mb&&ms)mb.onclick=function(){var u=URL.createObjectURL(new Blob([ms.outerHTML],{type:"image/svg+xml"})),a=document.createElement("a");a.href=u;a.download="positioning-matrix.svg";document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(u);},500);};
-  Array.prototype.forEach.call(v.querySelectorAll("[data-pc]"),function(c){c.onclick=function(){var ds=v.querySelectorAll("details.sec"),d=ds[ds.length-1];if(d)d.open=true;var t=v.querySelector("#pc"+c.getAttribute("data-pc"));(t||d||c).scrollIntoView({behavior:"smooth",block:"start"});};});
+  Array.prototype.forEach.call(v.querySelectorAll("[data-pc]"),function(c){c.onclick=function(){ST.psub="stands";mem("psub","stands");paint();window.scrollTo(0,0);};});
+  Array.prototype.forEach.call(v.querySelectorAll("[data-ps]"),function(b){b.onclick=function(){ST.psub=b.getAttribute("data-ps");mem("psub",ST.psub);paint();};});
   Array.prototype.forEach.call(v.querySelectorAll("[data-po]"),function(b){b.onclick=function(){ST.persOpt=b.getAttribute("data-po");paint();};});
 }
 function persPts(rows,get){
@@ -846,7 +850,7 @@ function personaSlide(opt,rowsBy,stat,assigned){
      '<p class="pt">Benefits</p><ol class="pl3">'+names(rs,"benefit_rank")+'</ol>'+
      '<p class="pt">Programme they prefer</p><p class="ps">'+mode(rs,function(r){return P(r).program_type;})+'</p>'+
      '<p class="pt">Hotel night in January</p><p class="ps">'+mode(rs,function(r){return P(r).wtp_hotel_jan_double_two_breakfast;})+'</p></div>';});
-  return h+'</div><p class="note" style="margin-top:8px">Click a persona to open the price positioning and what stands out, below.</p>';
+  return h+'</div><p class="note" style="margin-top:8px">Click a persona to see what stands out.</p>';
 }
 function compareCard(opt,rowsBy,stat){
   var G=opt.groups,rows=[];
