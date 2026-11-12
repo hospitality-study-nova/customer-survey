@@ -552,7 +552,16 @@ function personasView(v){
     if(!n)return '<span class="empty">no answers</span>';
     var seg=q.lab.map(function(_,i){var c=ans.filter(function(x){return x===i;}).length,p=c/n*100;return '<span class="tseg" style="width:'+p+'%;background:'+tierCol[i]+(i===4?';color:#fff':'')+'" title="'+TIERS[i]+' '+Math.round(p)+'%">'+(p>=13?Math.round(p)+'%':'')+'</span>';}).join("");
     return '<div class="tbar">'+seg+'</div><small class="tn">n='+n+'</small>';}
-  var pay='<div class="card" style="margin-bottom:14px"><h3>What they would pay</h3><p class="note">Share of each persona’s answers in each market price tier. It shows where people would pay. It does not label the persona.</p><div class="tleg">'+TIERS.map(function(t,i){return '<span><i style="background:'+tierCol[i]+'"></i>'+t+'</span>';}).join("")+'</div><div class="tablewrap"><table class="paytb"><thead><tr><th></th><th>Hotel night, January</th><th>Hotel night, August</th><th>Dinner per person</th></tr></thead><tbody>'+opt.groups.map(function(g,gi){return '<tr><td><b>'+esc(g.k)+'</b></td>'+WTPQ.map(function(q){return '<td>'+tierBar(rowsBy[gi],q)+'</td>';}).join("")+'</tr>';}).join("")+'</tbody></table></div></div>';
+  var PRICE_IDS=["pe_jan","pe_aug","pe_din","pe_mech_tier","pe_ben_tier"];
+  function allIdx(rs){var a=[];rs.forEach(function(r){WTPQ.forEach(function(q){var i=q.lab.indexOf(P(r)[q.f]);if(i>-1)a.push(i);});});return a;}
+  function med(a){if(!a.length)return null;var b=a.slice().sort(function(x,y){return x-y;}),m=Math.floor(b.length/2);return b.length%2?b[m]:Math.round((b[m-1]+b[m])/2);}
+  function hiPct(a){return a.length?Math.round(a.filter(function(i){return i>=2;}).length/a.length*100):null;}
+  var inP=all.filter(function(r,j){return asg[j]>-1;}),baseHi=hiPct(allIdx(inP)),baseMed=med(allIdx(inP));
+  var pos='<div class="card" style="margin-bottom:14px"><h3>Price position of each persona</h3><p class="note">All price answers of the persona together (hotel in January, hotel in August and dinner), each placed in its market tier. “Typical tier” is the middle answer. “High and above” is the share of answers in High, Premium or Luxury. The comparison is with all five personas together. It describes where people would pay, it does not label the persona.</p><div class="tablewrap"><table class="paytb"><thead><tr><th></th><th>Typical tier</th><th>High and above</th><th>All personas</th><th>Compared with the sample</th></tr></thead><tbody>'+
+   opt.groups.map(function(g,gi){var rs=rowsBy[gi],a=allIdx(rs),hp=hiPct(a),m=med(a),d=(hp==null||baseHi==null)?null:hp-baseHi;
+     var w=d==null?"-":(d>=8?"Leans higher":d<=-8?"Leans lower":"In line");if(rs.length<20&&d!=null)w+=" (small group, read with care)";
+     return '<tr><td><b>'+esc(g.k)+'</b></td><td>'+(m==null?"-":TIERS[m])+'</td><td>'+(hp==null?"-":hp+"%")+'</td><td>'+(baseHi==null?"-":baseHi+"% (typical: "+TIERS[baseMed]+")")+'</td><td>'+w+'</td></tr>';}).join("")+'</tbody></table></div><p class="note" style="margin-top:6px">Rule of thumb: “leans higher” or “lower” means 8 points or more away from the sample. It is a reading aid, not a statistical test.</p></div>';
+  var pay=pos+'<div class="grid ccg">'+SPECS.filter(function(x){return PRICE_IDS.indexOf(x.id)>-1;}).map(function(x){return chartCard(x);}).join("")+'</div>';
   function sureWord(t){return t==="Validated"?"Clear pattern":t==="Partly supported"?"Tendencies":t==="To validate"?"Needs more people":"No clear pattern";}
   var sd='<div class="card"><h3>What stands out, and how sure we are</h3><p class="note">Compared with the other four personas. Method in Methodology, Data analysis.</p><div class="tablewrap"><table class="paytb"><thead><tr><th></th><th>People</th><th>To reach 30</th><th>Higher than the others</th><th>Lower than the others</th><th>How sure</th></tr></thead><tbody>'+
    opt.groups.map(function(g,gi){var rs=rowsBy[gi],n=rs.length,ids=rs.map(function(r){return all.indexOf(r);}),up=[],dn=[];
@@ -561,8 +570,8 @@ function personasView(v){
     up.sort(function(p,q){return q.z-p.z;});dn.sort(function(p,q){return q.z-p.z;});
     function names(arr){return arr.slice(0,2).map(function(x){return esc(x.l);}).join("<br>")||"-";}
     return '<tr><td><b>'+esc(g.k)+'</b></td><td>'+n+'</td><td>'+Math.max(0,30-n)+'</td><td>'+(n<5?"too few people":names(up))+'</td><td>'+(n<5?"too few people":names(dn))+'</td><td>'+sureWord(stat[gi].t)+'</td></tr>';}).join("")+'</tbody></table></div></div>';
-  h+='<details class="sec"><summary>Charts for the Steering <small>(download as PNG, SVG or CSV)</small></summary><p class="note">Same format as the Steering charts. Every chart can be changed (type, colours, size) and downloaded.</p><div class="grid ccg">'+SPECS.filter(function(x){return x.sec==="6. Personas, for the Steering";}).map(function(x){return chartCard(x);}).join("")+'</div></details>';
-  h+='<details class="sec"><summary>Price tiers and what stands out <small>(for the team)</small></summary>'+pay+sd;
+  h+='<details class="sec"><summary>Charts for the Steering <small>(download as PNG, SVG or CSV)</small></summary><p class="note">Same format as the Steering charts. Every chart can be changed (type, colours, size) and downloaded.</p><div class="grid ccg">'+SPECS.filter(function(x){return x.sec==="6. Personas, for the Steering"&&["pe_jan","pe_aug","pe_din","pe_mech_tier","pe_ben_tier"].indexOf(x.id)<0;}).map(function(x){return chartCard(x);}).join("")+'</div></details>';
+  h+='<details class="sec"><summary>Price positioning and what stands out <small>(for the team)</small></summary>'+pay+sd;
   h+='</details>';
   v.innerHTML=h;
   ST.cx=personaCtx();Array.prototype.forEach.call(v.querySelectorAll(".cc"),function(c){bindChart(c);drawChart(c);});
@@ -683,6 +692,7 @@ function cr(a,b){return function(rows,c){return crossData(rows,a,b,c);};}
  addS(S6,"pe_din","Dinner per person by persona","% inside each persona, by price tier.",tierWrap("din",2),"stack");
  addS(S5,"p_prog_pers","Programme type by persona","Share inside each persona.",cr("persona","prog"),"stack");
 })();
+["k_vert_p","k_mech_p","k_ben_p","pe_vert","pe_mech","pe_ben","pe_bundle"].forEach(function(id){var x=SPECS.filter(function(y){return y.id===id;})[0];if(x)x.pers=true;});
 function chartVals(d,o){var cat=d.cats.length,out=d.sers.map(function(s){return s.vals.slice();});
   if(d.unit==="share"&&o.mode==="pct"){
     if(d.sers.length>1){for(var j=0;j<cat;j++){var t=0;d.sers.forEach(function(s){t+=s.vals[j];});d.sers.forEach(function(s,i){out[i][j]=t?s.vals[j]/t*100:0;});}}
@@ -699,7 +709,7 @@ function renderChart(d,o,title){
   var multi=d.sers.length>1,g=[],H,titleH=o.showTitle?40:0,top=titleH+8,fb=false;
   if(type==="column"&&((multi&&cats.length*d.sers.length>24)||(!multi&&cats.length>12))){type="bar";fb=true;}
   var txt=function(x,y,s,a,w,c,sz){return '<text x="'+x+'" y="'+y+'" font-family="'+CF+'" font-size="'+(sz||fs)+'" fill="'+(c||"#000000")+'" text-anchor="'+(a||"start")+'"'+(w?' font-weight="'+w+'"':'')+'>'+svgEsc(s)+'</text>';};
-  var hlc=function(i,j){if(multi||!o.hl)return pal[i%pal.length];var v=V[0][j],gt=V[0].filter(function(z){return z>v;}).length;return gt<3?"#AE8C44":"#8A8A8C";};var legendH=0,leg="";
+  var hlc=function(i,j){if(multi||!o.hl)return pal[i%pal.length];var v=V[0][j],gt=V[0].filter(function(z){return z>v;}).length;return gt===0?"#AE8C44":gt===1?"#C9B27A":gt===2?"#E3D6B4":"#8A8A8C";};var legendH=0,leg="";
   function legend(y,items){var x=0,yy=y,out="";items.forEach(function(it){var w=it.n.length*fs*0.58+30;if(x+w>W-20&&x>0){x=0;yy+=fs+10;}out+='<rect x="'+(20+x)+'" y="'+(yy-fs+2)+'" width="'+(fs-2)+'" height="'+(fs-2)+'" fill="'+it.c+'"/>'+txt(20+x+fs+4,yy,it.n,"start");x+=w;});return {h:yy-y+fs+10,s:out};}
   if(type==="table"){
     var cw=Math.max(64,Math.min(120,(W-200)/Math.max(1,d.sers.length))),lw3=Math.min(240,W-cw*d.sers.length-10),rh3=fs+18,x0=10,y0=top;
@@ -737,10 +747,14 @@ function renderChart(d,o,title){
   var head=o.showTitle?txt(20,26,title,"start","700","#000000",fs+5):"";
   var note='';
   return {svg:'<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+(o.bg?'<rect width="100%" height="100%" fill="'+o.bg+'"/>':"")+head+g.join("")+'</svg>',w:W,h:H,fb:fb};}
-function chartState(id,spec){ST.cs=ST.cs||{};var s=ST.cs[id];if(!s){s=ST.cs[id]={type:spec.type,mode:"pct",labels:true,pal:"gold",size:"full",sort:"none",title:spec.title,showTitle:false,hl:true};}return s;}
+function chartState(id,spec){ST.cs=ST.cs||{};var s=ST.cs[id];if(!s){s=ST.cs[id]={type:spec.type,mode:"pct",labels:true,pal:spec.pers?"grey":"gold",size:"full",sort:"none",title:spec.title,showTitle:false,hl:true,pv:"all"};}return s;}
 function chartCtx(){var all=complete(),asg=assignOpt(POPTS[0],all),pm={};all.forEach(function(r,j){pm[r.session_id]=asg[j]>-1?POPTS[0].groups[asg[j]].k:null;});
   var f=ST.sf||(ST.sf={place:"all",pers:"all"}),rows=all.filter(function(r){return (f.place==="all"||placeOf(r)===f.place)&&(f.pers==="all"||pm[r.session_id]===f.pers);});return {rows:rows,pm:pm,c:{pm:pm}};}
-function chartData(spec,cx){return spec.build(cx.rows,cx.c);}
+function chartData(spec,cx,s){var d=spec.build(cx.rows,cx.c);
+  if(spec.pers&&s&&s.pv&&s.pv!=="all"){var k=d.sers.filter(function(x){return x.name===s.pv;})[0];
+    if(k){var idx=d.cats.map(function(_,i){return i;}).sort(function(a,b){return k.vals[b]-k.vals[a];});
+      d={cats:idx.map(function(i){return d.cats[i];}),sers:[{name:k.name,vals:idx.map(function(i){return k.vals[i];})}],unit:d.unit,n:d.n,xl:d.xl,yl:d.yl};}}
+  return d;}
 function csvOf(d,o){var V=chartVals(d,o),lines=[["",].concat(d.sers.map(function(s){return s.name;}))];d.cats.forEach(function(c2,j){lines.push([c2].concat(V.map(function(s){return Math.round(s[j]*10)/10;})));});
   return "﻿"+lines.map(function(l){return l.map(function(x){x=String(x);return /[;",\n]/.test(x)?'"'+x.replace(/"/g,'""')+'"':x;}).join(",");}).join("\r\n");}
 function dlBlob(b,name){var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(a.href);},2000);}
@@ -752,14 +766,14 @@ function svgToPng(svg,w,h,bg,name){var img=new Image(),S=3;img.onload=function()
 function chartCard(spec,isCustom){var s=chartState(spec.id,spec);
   var sel=function(k,opts){return '<select data-k="'+k+'">'+opts.map(function(o){return '<option value="'+o[0]+'"'+(String(s[k])===String(o[0])?' selected':'')+'>'+o[1]+'</option>';}).join("")+'</select>';};
   return '<div class="card cc" data-cid="'+spec.id+'"><div class="cch"><input class="cct" data-k="title" value="'+esc(s.title)+'" aria-label="Chart title"></div>'+
-   '<div class="cctb">'+sel("type",[["bar","Bars"],["column","Columns"],["stack","Stacked bars"],["donut","Donut"],["table","Table"]])+sel("mode",[["pct","Share %"],["n","Count"]])+sel("sort",[["none","Order as asked"],["desc","High to low"]])+sel("pal",[["gold","Steering gold"],["grey","Greys"],["mono","Gold tones"]])+sel("size",[["full","Full slide"],["half","Half slide"]])+
+   '<div class="cctb">'+sel("type",[["bar","Bars"],["column","Columns"],["stack","Stacked bars"],["donut","Donut"],["table","Table"]])+sel("mode",[["pct","Share %"],["n","Count"]])+sel("sort",[["none","Order as asked"],["desc","High to low"]])+sel("pal",[["gold","Steering gold"],["grey","Greys"],["mono","Gold tones"]])+sel("size",[["full","Full slide"],["half","Half slide"]])+(spec.pers?sel("pv",[["all","All personas"]].concat(POPTS[0].groups.map(function(g){return [g.k,g.k];}))):"")+
    '<label><input type="checkbox" data-k="labels"'+(s.labels?' checked':'')+'> Labels</label><label><input type="checkbox" data-k="hl"'+(s.hl?' checked':'')+'> Highlight top 3 in gold</label><label><input type="checkbox" data-k="showTitle"'+(s.showTitle?' checked':'')+'> Title in image</label></div>'+
    '<div class="ccv"></div><p class="note ccn">'+esc(spec.note)+'</p><div class="cctb"><button class="btn sm" data-dl="png">PNG transparent</button><button class="btn sm" data-dl="pngw">PNG white</button><button class="btn sm" data-dl="svg">SVG</button><button class="btn sm" data-dl="csv">CSV</button></div></div>';}
-function drawChart(card){var id=card.getAttribute("data-cid"),spec=id==="custom"?ST.customSpec():SPECS.filter(function(x){return x.id===id;})[0],s=ST.cs[id],cx=ST.cx,d=chartData(spec,cx),
+function drawChart(card){var id=card.getAttribute("data-cid"),spec=id==="custom"?ST.customSpec():SPECS.filter(function(x){return x.id===id;})[0],s=ST.cs[id],cx=ST.cx,d=chartData(spec,cx,s),
   r=renderChart(d,Object.assign({},s,{bg:null}),s.title);card.querySelector(".ccv").innerHTML=r.svg;card.querySelector(".ccn").textContent=(spec.note?spec.note+" ":"")+"n = "+d.n+"."+(r.fb?" Shown as horizontal bars: too many columns to read.":"");}
 function bindChart(card){var id=card.getAttribute("data-cid");
   Array.prototype.forEach.call(card.querySelectorAll("[data-k]"),function(el){var ev=el.type==="checkbox"?"onchange":(el.tagName==="INPUT"?"oninput":"onchange");el[ev]=function(){ST.cs[id][el.getAttribute("data-k")]=el.type==="checkbox"?el.checked:el.value;drawChart(card);};});
-  Array.prototype.forEach.call(card.querySelectorAll("[data-dl]"),function(b){b.onclick=function(){var spec=id==="custom"?ST.customSpec():SPECS.filter(function(x){return x.id===id;})[0],s=ST.cs[id],d=chartData(spec,ST.cx),k=b.getAttribute("data-dl"),nm=fname(s.title);
+  Array.prototype.forEach.call(card.querySelectorAll("[data-dl]"),function(b){b.onclick=function(){var spec=id==="custom"?ST.customSpec():SPECS.filter(function(x){return x.id===id;})[0],s=ST.cs[id],d=chartData(spec,ST.cx,s),k=b.getAttribute("data-dl"),nm=fname(s.title);
     if(k==="csv"){dlBlob(new Blob([csvOf(d,s)],{type:"text/csv;charset=utf-8"}),nm+".csv");return;}
     var r=renderChart(d,Object.assign({},s,{bg:k==="pngw"?"#ffffff":null}),s.title);
     if(k==="svg")dlBlob(new Blob([r.svg],{type:"image/svg+xml"}),nm+".svg");else svgToPng(r.svg,r.w,r.h,k==="pngw"?"#ffffff":null,nm+(k==="pngw"?"-white":"")+".png");};});}
@@ -812,7 +826,7 @@ function personaSlide(opt,rowsBy,stat,assigned){
      '<p class="pt">Benefits</p><ol class="pl3">'+names(rs,"benefit_rank")+'</ol>'+
      '<p class="pt">Programme they prefer</p><p class="ps">'+mode(rs,function(r){return P(r).program_type;})+'</p>'+
      '<p class="pt">Hotel night in January</p><p class="ps">'+mode(rs,function(r){return P(r).wtp_hotel_jan_double_two_breakfast;})+'</p></div>';});
-  return h+'</div><p class="note" style="margin-top:8px">Click a persona to open the price tiers and what stands out, below.</p>';
+  return h+'</div><p class="note" style="margin-top:8px">Click a persona to open the price positioning and what stands out, below.</p>';
 }
 function compareCard(opt,rowsBy,stat){
   var G=opt.groups,rows=[];
