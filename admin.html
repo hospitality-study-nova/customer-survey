@@ -636,6 +636,12 @@ function pointsData(rows,field,c){var items={};rows.forEach(function(r){cleanRan
     return {name:g,vals:cats.map(function(it){var v=[];rs.forEach(function(r){var a=cleanRank(P(r)[field]),i=a.indexOf(it);if(i>-1)v.push(a.length-i);});return v.length?Math.round(mean(v)*10)/10:0;})};});
   var idx=cats.map(function(_,i){return i;});idx.sort(function(a,b){var t=function(i){return sers.reduce(function(s,q){return s+q.vals[i];},0);};return t(b)-t(a);});
   return {cats:idx.map(function(i){return cats[i];}),sers:sers.map(function(q){return {name:q.name,vals:idx.map(function(i){return q.vals[i];})};}),unit:"points",n:rows.length,xl:"",yl:""};}
+var TIERG=[{k:"Mass market (up to €85)",f:function(i){return i===0;}},{k:"Mid (€86 to €110)",f:function(i){return i===1;}},{k:"High and above (€111+)",f:function(i){return i>=2;}}];
+function tierPointsData(rows,field){var rs=rows.filter(function(r){return jan(r)>=0;}),items={};rs.forEach(function(r){cleanRank(P(r)[field]).forEach(function(x){items[x]=1;});});
+  var cats=Object.keys(items),sers=TIERG.map(function(g){var gr=rs.filter(function(r){return g.f(jan(r));});
+    return {name:g.k+" n="+gr.length,vals:cats.map(function(it){var v=[];gr.forEach(function(r){var a=cleanRank(P(r)[field]),i=a.indexOf(it);if(i>-1)v.push(a.length-i);});return v.length?Math.round(mean(v)*10)/10:0;})};});
+  var idx=cats.map(function(_,i){return i;});idx.sort(function(a,b){var t=function(i){return sers.reduce(function(s,q){return s+q.vals[i];},0);};return t(b)-t(a);});
+  return {cats:idx.map(function(i){return cats[i];}),sers:sers.map(function(q){return {name:q.name,vals:idx.map(function(i){return q.vals[i];})};}),unit:"points",n:rs.length,xl:"",yl:""};}
 function bundleOf(r){var b=P(r).program_built;if(!b||!b.enter||!b.earn||!b.level_up)return null;var sh=function(x){return BSHORT[x]||x;};return sh(b.enter)+" + "+sh(b.earn)+" + "+sh(b.level_up);}
 function bundleData(rows,c){var cnt={};rows.forEach(function(r){var k=bundleOf(r);if(k)cnt[k]=(cnt[k]||0)+1;});
   var cats=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]||(a<b?-1:1);}).slice(0,6),groups=POPTS[0].groups.map(function(g){return g.k;});
@@ -668,6 +674,8 @@ function cr(a,b){return function(rows,c){return crossData(rows,a,b,c);};}
  addS(S6,"pe_vert","What mattered most: average points by persona","Average points: 1st place gets 8 points, last place 1. Higher = ranked higher.",function(rows,c){return pointsData(rows,"vertical_rank",c);},"bar");
  addS(S6,"pe_mech","Mechanisms: average points by persona","Average points: 1st place gets 9 points, last place 1. Higher = ranked higher.",function(rows,c){return pointsData(rows,"mechanism_rank",c);},"bar");
  addS(S6,"pe_ben","Benefits: average points by persona","Average points: 1st place gets 11 points, last place 1. Higher = ranked higher.",function(rows,c){return pointsData(rows,"benefit_rank",c);},"bar");
+ addS(S6,"pe_mech_tier","Mechanisms by price tier: average points","Price tier = what they would pay for a hotel night in January. Average points: 1st place gets 9 points, last place 1. Shows whether the mechanisms change with price.",function(rows){return tierPointsData(rows,"mechanism_rank");},"bar");
+ addS(S6,"pe_ben_tier","Benefits by price tier: average points","Price tier = what they would pay for a hotel night in January. Average points: 1st place gets 11 points, last place 1. Shows whether the benefits change with price.",function(rows){return tierPointsData(rows,"benefit_rank");},"bar");
  addS(S6,"pe_entry","Entry point by persona","% of each persona for whom it is the main reason to go. Adds up to 100% in each bar.",cr("persona","entry"),"stack");
  addS(S6,"pe_bundle","Most chosen bundles by persona","Bundle = how to enter + how to earn + how to level up. % of each persona. The six most frequent overall.",bundleData,"bar");
  addS(S6,"pe_jan","Hotel in January by persona","% inside each persona, by price tier (Mass market to Luxury).",tierWrap("jan",0),"stack");
