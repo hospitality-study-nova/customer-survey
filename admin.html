@@ -572,9 +572,13 @@ function personasView(v){
     g.push('<rect x="'+L+'" y="'+T+'" width="'+(W-L-R)+'" height="'+(H-T-Bt)+'" fill="#FAF7F0"/>');
     g.push('<line x1="'+X(B.h.m)+'" y1="'+T+'" x2="'+X(B.h.m)+'" y2="'+(H-Bt)+'" stroke="#8A8A8C" stroke-dasharray="5 4"/><line x1="'+L+'" y1="'+Y(B.d.m)+'" x2="'+(W-R)+'" y2="'+Y(B.d.m)+'" stroke="#8A8A8C" stroke-dasharray="5 4"/>');
     g.push('<text x="'+(W-R-6)+'" y="'+(T+16)+'" text-anchor="end" font-size="12" fill="#8A8A8C">Higher on hotel and dinner</text><text x="'+(L+6)+'" y="'+(H-Bt-8)+'" font-size="12" fill="#8A8A8C">Lower on hotel and dinner</text>');
-    pts.forEach(function(p){var cx=X(p.h.m),cy=Y(p.d.m),ex=1.96*(p.h.se||0)/(x1-x0)*(W-L-R),ey=1.96*(p.d.se||0)/(y1-y0)*(H-T-Bt);
-      g.push('<line x1="'+(cx-ex)+'" y1="'+cy+'" x2="'+(cx+ex)+'" y2="'+cy+'" stroke="#AE8C44" stroke-opacity=".45" stroke-width="3"/><line x1="'+cx+'" y1="'+(cy-ey)+'" x2="'+cx+'" y2="'+(cy+ey)+'" stroke="#AE8C44" stroke-opacity=".45" stroke-width="3"/>');
-      g.push('<circle cx="'+cx+'" cy="'+cy+'" r="9" fill="#AE8C44" stroke="#fff" stroke-width="2"/><text x="'+(cx+13)+'" y="'+(cy-11)+'" font-size="13" font-weight="700" fill="#2E2E2E">'+esc(p.k)+' ('+p.n+')</text>');});
+    var pl=L,pr=W-R,pt=T,pb=H-Bt,cl=function(v,lo,hi){return Math.max(lo,Math.min(hi,v));},ps=pts.map(function(p){var cx=X(p.h.m),cy=Y(p.d.m),ex=1.96*(p.h.se||0)/(x1-x0)*(W-L-R),ey=1.96*(p.d.se||0)/(y1-y0)*(H-T-Bt);return {p:p,cx:cx,cy:cy,ex:ex,ey:ey,w:(p.k.length+5)*7.4};});
+    ps.forEach(function(q){var xa=cl(q.cx-q.ex,pl,pr),xb=cl(q.cx+q.ex,pl,pr),ya=cl(q.cy-q.ey,pt,pb),yb=cl(q.cy+q.ey,pt,pb);
+      g.push('<path d="M'+xa+' '+q.cy+'H'+xb+'M'+q.cx+' '+ya+'V'+yb+'M'+xa+' '+(q.cy-4)+'v8M'+xb+' '+(q.cy-4)+'v8M'+(q.cx-4)+' '+ya+'h8M'+(q.cx-4)+' '+yb+'h8" stroke="#AE8C44" stroke-opacity=".5" stroke-width="1.5" fill="none"/>');});
+    var lab=ps.slice().sort(function(a,b){return a.cy-b.cy;}),last=-99;
+    lab.forEach(function(q){var y=Math.max(q.cy-12,last+16,pt+12);q.ly=y;last=y;});
+    ps.forEach(function(q){g.push('<circle cx="'+q.cx+'" cy="'+q.cy+'" r="8" fill="#AE8C44" stroke="#fff" stroke-width="2"/>');});
+    ps.forEach(function(q){var left=q.cx+14+q.w>pr,x=left?q.cx-14:q.cx+14;g.push('<text x="'+x+'" y="'+q.ly+'" text-anchor="'+(left?"end":"start")+'" font-size="13" font-weight="700" fill="#2E2E2E" stroke="#FAF7F0" stroke-width="4" paint-order="stroke" stroke-linejoin="round">'+esc(q.p.k)+' ('+q.p.n+')</text>');});
     [0,1,2,3,4].forEach(function(i){var vx=x0+(x1-x0)*i/4,vy=y0+(y1-y0)*i/4;g.push('<text x="'+X(vx)+'" y="'+(H-Bt+18)+'" text-anchor="middle" font-size="12" fill="#5E5E5E">'+vx.toFixed(1)+'</text><text x="'+(L-8)+'" y="'+(Y(vy)+4)+'" text-anchor="end" font-size="12" fill="#5E5E5E">'+vy.toFixed(1)+'</text>');});
     g.push('<text x="'+(L+(W-L-R)/2)+'" y="'+(H-14)+'" text-anchor="middle" font-size="13" fill="#2E2E2E">Hotel night, average tier (1 Mass market to 5 Luxury)</text><text transform="translate(16 '+(T+(H-T-Bt)/2)+') rotate(-90)" text-anchor="middle" font-size="13" fill="#2E2E2E">Dinner, average tier</text>');
     return '<svg id="posmx" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:'+W+'px;font-family:Aptos,Calibri,Arial,sans-serif"><rect width="'+W+'" height="'+H+'" fill="#fff"/>'+g.join("")+'</svg>';}
