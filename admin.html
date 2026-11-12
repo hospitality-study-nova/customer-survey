@@ -650,16 +650,16 @@ function cr(a,b){return function(rows,c){return crossData(rows,a,b,c);};}
  addS(S2,"w_prem_comp","Premium share by who they travelled with","",cr("comp","prem"),"stack");
  addS(S3,"r_entry_dest","Entry point by destination","Share inside each destination.",cr("dest","entry"),"stack");
  addS(S4,"k_vert","What mattered most: rank score","100 = always ranked first, 0 = always last.",function(rows,c){return scoreData(rows,"vertical_rank",c,false);});
- addS(S4,"k_vert_p","What mattered most, by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"vertical_rank",c,true);},"column");
+ addS(S4,"k_vert_p","What mattered most, by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"vertical_rank",c,true);},"bar");
  addS(S4,"k_mech","Mechanisms: rank score","100 = always ranked first, 0 = always last.",function(rows,c){return scoreData(rows,"mechanism_rank",c,false);});
- addS(S4,"k_mech_p","Mechanisms by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"mechanism_rank",c,true);},"column");
+ addS(S4,"k_mech_p","Mechanisms by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"mechanism_rank",c,true);},"bar");
  addS(S4,"k_ben","Benefits: rank score","100 = always ranked first, 0 = always last.",function(rows,c){return scoreData(rows,"benefit_rank",c,false);});
- addS(S4,"k_ben_p","Benefits by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"benefit_rank",c,true);},"column");
+ addS(S4,"k_ben_p","Benefits by persona","Rank score: 100 = always first.",function(rows,c){return scoreData(rows,"benefit_rank",c,true);},"bar");
  [["prog","Programme type they would build"]].forEach(function(x){addS(S5,"p_"+x[0],x[1],"Share of respondents.",single(x[0]));});
  var S6="6. Personas, for the Steering";
- addS(S6,"pe_vert","What mattered most: share who put it in their top 3, by persona","% of each persona with the activity in their top 3 of 8.",function(rows,c){return top3Data(rows,"vertical_rank",c);},"column");
- addS(S6,"pe_mech","Mechanisms: share who put it in their top 3, by persona","% of each persona with the mechanism in their top 3 of 9.",function(rows,c){return top3Data(rows,"mechanism_rank",c);},"column");
- addS(S6,"pe_ben","Benefits: share who put it in their top 3, by persona","% of each persona with the benefit in their top 3 of 11.",function(rows,c){return top3Data(rows,"benefit_rank",c);},"column");
+ addS(S6,"pe_vert","What mattered most: share who put it in their top 3, by persona","% of each persona with the activity in their top 3 of 8.",function(rows,c){return top3Data(rows,"vertical_rank",c);},"bar");
+ addS(S6,"pe_mech","Mechanisms: share who put it in their top 3, by persona","% of each persona with the mechanism in their top 3 of 9.",function(rows,c){return top3Data(rows,"mechanism_rank",c);},"bar");
+ addS(S6,"pe_ben","Benefits: share who put it in their top 3, by persona","% of each persona with the benefit in their top 3 of 11.",function(rows,c){return top3Data(rows,"benefit_rank",c);},"bar");
  addS(S6,"pe_entry","Entry point by persona","% inside each persona.",cr("persona","entry"),"stack");
  addS(S6,"pe_bundle","Most chosen bundles by persona","Bundle = how to enter + how to earn + how to level up. % of each persona. The six most frequent overall.",bundleData,"bar");
  addS(S6,"pe_jan","Hotel in January by persona","% inside each persona, by price tier (Mass market to Luxury).",tierWrap("jan",0),"stack");
@@ -680,7 +680,8 @@ function renderChart(d,o,title){
   var cats=d.cats.map(function(x,i){return i;}),V=chartVals(d,o);
   if(o.sort==="desc"&&type!=="donut"){var tot=function(j){return V.reduce(function(a,s){return a+s[j];},0);};cats.sort(function(a,b){return tot(b)-tot(a);});}
   var fmt=function(v){return d.unit==="pctval"||(o.mode==="pct"&&d.unit==="share")?Math.round(v)+"%":(d.unit==="score"?String(Math.round(v)):String(Math.round(v)));};
-  var multi=d.sers.length>1,g=[],H,titleH=o.showTitle?40:0,top=titleH+8;
+  var multi=d.sers.length>1,g=[],H,titleH=o.showTitle?40:0,top=titleH+8,fb=false;
+  if(type==="column"&&((multi&&cats.length*d.sers.length>24)||(!multi&&cats.length>12))){type="bar";fb=true;}
   var txt=function(x,y,s,a,w,c,sz){return '<text x="'+x+'" y="'+y+'" font-family="'+CF+'" font-size="'+(sz||fs)+'" fill="'+(c||"#000000")+'" text-anchor="'+(a||"start")+'"'+(w?' font-weight="'+w+'"':'')+'>'+svgEsc(s)+'</text>';};
   var hlc=function(i,j){if(multi||!o.hl)return pal[i%pal.length];var v=V[0][j],gt=V[0].filter(function(z){return z>v;}).length;return gt<3?"#AE8C44":"#8A8A8C";};var legendH=0,leg="";
   function legend(y,items){var x=0,yy=y,out="";items.forEach(function(it){var w=it.n.length*fs*0.58+30;if(x+w>W-20&&x>0){x=0;yy+=fs+10;}out+='<rect x="'+(20+x)+'" y="'+(yy-fs+2)+'" width="'+(fs-2)+'" height="'+(fs-2)+'" fill="'+it.c+'"/>'+txt(20+x+fs+4,yy,it.n,"start");x+=w;});return {h:yy-y+fs+10,s:out};}
@@ -709,17 +710,17 @@ function renderChart(d,o,title){
     g.push('<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+(top+ph)+'" y2="'+(top+ph)+'" stroke="#8A8A8C" stroke-width="1"/>');
     var lg3={h:0,s:""};if(multi){lg3=legend(top+ph+pb,d.sers.map(function(s,i){return {n:s.name,c:pal[i%pal.length]};}));g.push(lg3.s);}H=top+ph+pb+(multi?lg3.h:0)+4;
   }else{
-    var lw=0;d.cats.forEach(function(x){lw=Math.max(lw,Math.min(44,x.length));});lw=Math.min(330,lw*fs*0.52+14);var pr2=44,iw2=W-lw-pr2-20,rh=multi&&type==="bar"?d.sers.length*(fs+5)+14:fs+22,mx2=0;
+    var lw=0;d.cats.forEach(function(x){lw=Math.max(lw,Math.min(44,x.length));});lw=Math.min(330,lw*fs*0.52+14);var pr2=44,iw2=W-lw-pr2-20,rh=multi&&type==="bar"?d.sers.length*(Math.round(fs*0.78)+2)+14:fs+22,mx2=0;
     if(type==="stack"){V.forEach(function(s,i){});cats.forEach(function(j){var t=V.reduce(function(a,s){return a+s[j];},0);if(t>mx2)mx2=t;});}else V.forEach(function(s){s.forEach(function(v){if(v>mx2)mx2=v;});});mx2=mx2||1;
     cats.forEach(function(j,k){var y=top+k*rh;g.push(txt(20+lw-8,y+rh/2+4,trunc(d.cats[j],44),"end"));
       if(type==="stack"){var x=20+lw;d.sers.forEach(function(s,i){var w=V[i][j]/mx2*iw2;if(w<=0)return;g.push('<rect x="'+x+'" y="'+(y+6)+'" width="'+w+'" height="'+(rh-12)+'" fill="'+pal[i%pal.length]+'" stroke="#fff" stroke-width="0.8"/>');if(o.labels&&w>26)g.push(txt(x+w/2,y+rh/2+4,fmt(V[i][j]),"middle","700",(i%pal.length<2||i%pal.length===5?"#fff":"#000000"),fs-1));x+=w;});}
-      else{var bh=multi?fs+3:rh-12;d.sers.forEach(function(s,i){var w=V[i][j]/mx2*iw2,yy=y+6+(multi?i*(bh+2):0);g.push('<rect x="'+(20+lw)+'" y="'+yy+'" width="'+Math.max(0,w)+'" height="'+bh+'" fill="'+hlc(i,j)+'"/>');if(o.labels)g.push(txt(20+lw+w+5,yy+bh/2+4,fmt(V[i][j]),"start","700","#000000",fs-1));});}});
+      else{var bh=multi?Math.round(fs*0.78):rh-12;d.sers.forEach(function(s,i){var w=V[i][j]/mx2*iw2,yy=y+6+(multi?i*(bh+2):0);g.push('<rect x="'+(20+lw)+'" y="'+yy+'" width="'+Math.max(0,w)+'" height="'+bh+'" fill="'+hlc(i,j)+'"/>');if(o.labels)g.push(txt(20+lw+w+5,yy+bh/2+(multi?3:4),fmt(V[i][j]),"start","700","#000000",multi?fs-4:fs-1));});}});
     var by=top+cats.length*rh+6;g.push('<line x1="'+(20+lw)+'" x2="'+(20+lw)+'" y1="'+top+'" y2="'+(by-6)+'" stroke="#8A8A8C"/>');
     var lg4={h:0,s:""};if(multi){lg4=legend(by+16,d.sers.map(function(s,i){return {n:s.name,c:pal[i%pal.length]};}));g.push(lg4.s);}H=by+(multi?lg4.h+16:0)+4;
   }
   var head=o.showTitle?txt(20,26,title,"start","700","#000000",fs+5):"";
   var note='';
-  return {svg:'<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+(o.bg?'<rect width="100%" height="100%" fill="'+o.bg+'"/>':"")+head+g.join("")+'</svg>',w:W,h:H};}
+  return {svg:'<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+(o.bg?'<rect width="100%" height="100%" fill="'+o.bg+'"/>':"")+head+g.join("")+'</svg>',w:W,h:H,fb:fb};}
 function chartState(id,spec){ST.cs=ST.cs||{};var s=ST.cs[id];if(!s){s=ST.cs[id]={type:spec.type,mode:"pct",labels:true,pal:"gold",size:"full",sort:"none",title:spec.title,showTitle:false,hl:true};}return s;}
 function chartCtx(){var all=complete(),asg=assignOpt(POPTS[0],all),pm={};all.forEach(function(r,j){pm[r.session_id]=asg[j]>-1?POPTS[0].groups[asg[j]].k:null;});
   var f=ST.sf||(ST.sf={place:"all",pers:"all"}),rows=all.filter(function(r){return (f.place==="all"||placeOf(r)===f.place)&&(f.pers==="all"||pm[r.session_id]===f.pers);});return {rows:rows,pm:pm,c:{pm:pm}};}
@@ -739,7 +740,7 @@ function chartCard(spec,isCustom){var s=chartState(spec.id,spec);
    '<label><input type="checkbox" data-k="labels"'+(s.labels?' checked':'')+'> Labels</label><label><input type="checkbox" data-k="hl"'+(s.hl?' checked':'')+'> Highlight top 3 in gold</label><label><input type="checkbox" data-k="showTitle"'+(s.showTitle?' checked':'')+'> Title in image</label></div>'+
    '<div class="ccv"></div><p class="note ccn">'+esc(spec.note)+'</p><div class="cctb"><button class="btn sm" data-dl="png">PNG transparent</button><button class="btn sm" data-dl="pngw">PNG white</button><button class="btn sm" data-dl="svg">SVG</button><button class="btn sm" data-dl="csv">CSV</button></div></div>';}
 function drawChart(card){var id=card.getAttribute("data-cid"),spec=id==="custom"?ST.customSpec():SPECS.filter(function(x){return x.id===id;})[0],s=ST.cs[id],cx=ST.cx,d=chartData(spec,cx),
-  r=renderChart(d,Object.assign({},s,{bg:null}),s.title);card.querySelector(".ccv").innerHTML=r.svg;card.querySelector(".ccn").textContent=(spec.note?spec.note+" ":"")+"n = "+d.n+".";}
+  r=renderChart(d,Object.assign({},s,{bg:null}),s.title);card.querySelector(".ccv").innerHTML=r.svg;card.querySelector(".ccn").textContent=(spec.note?spec.note+" ":"")+"n = "+d.n+"."+(r.fb?" Shown as horizontal bars: too many columns to read.":"");}
 function bindChart(card){var id=card.getAttribute("data-cid");
   Array.prototype.forEach.call(card.querySelectorAll("[data-k]"),function(el){var ev=el.type==="checkbox"?"onchange":(el.tagName==="INPUT"?"oninput":"onchange");el[ev]=function(){ST.cs[id][el.getAttribute("data-k")]=el.type==="checkbox"?el.checked:el.value;drawChart(card);};});
   Array.prototype.forEach.call(card.querySelectorAll("[data-dl]"),function(b){b.onclick=function(){var spec=id==="custom"?ST.customSpec():SPECS.filter(function(x){return x.id===id;})[0],s=ST.cs[id],d=chartData(spec,ST.cx),k=b.getAttribute("data-dl"),nm=fname(s.title);
