@@ -143,7 +143,7 @@ if(!C.SUPABASE_URL||!C.SUPABASE_ANON_KEY||!window.supabase){
 }
 var sb=window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 function mem(k,v){try{if(v===undefined)return localStorage.getItem("adm_"+k);localStorage.setItem("adm_"+k,v);}catch(e){return null;}}
-var ST={tab:mem("tab")||"overview",mtab:mem("mtab")||undefined,psub:mem("psub")||"overview",rows:[],filter:"all",user:null,detail:null,loaded:false,err:null};
+var ST={tab:mem("tab")||"overview",mtab:mem("mtab")||undefined,psub:mem("psub")||"overview",pver:mem("pver")||"new",hthr:mem("hthr")||"5",rows:[],filter:"all",user:null,detail:null,loaded:false,err:null};
 
 /* ---------- questionnaire link ---------- */
 function formUrl(){return C.SITE_URL||new URL("./",location.href).href;}
@@ -521,6 +521,82 @@ function kwTest(vals,grp,k){
 }
 function mean(a){a=a.filter(function(x){return x!=null;});return a.length?a.reduce(function(s,x){return s+x;},0)/a.length:null;}
 function dmin(n,N){return 2.8*Math.sqrt(1/n+1/Math.max(1,N-n));}
+function newPersonasHtml(){
+  var C=[
+   ["Golf","1","Golfer travelling","Alone, with friends or with family. What they look for changes completely with who they travel with.","Sporadic to regular","Golf courses, golf hotels","Interviews","No answer yet"],
+   ["Golf","2","Golfer near home","Alone or with golf partners. Very regular.","Very regular","Golf club","Interviews","No answer yet"],
+   ["Non-golf","3","Locals","Everyday perks: food and beverage, golf, events, experiences. The hotel is not relevant.","Very regular","Restaurants, events, clubs","Interviews","No answer yet"],
+   ["Tourism","4","Family, all 12+","Each in three flavours: regular with a home there, regular without a home, sporadic.","Regular or sporadic","Hotel, beach, dinner","Survey","Can validate"],
+   ["Tourism","5","Family with a child under 12","Same three flavours as 4.","Regular or sporadic","Hotel, beach, dinner","Survey","Can validate"],
+   ["Tourism","6","Friends, leisure","Regular with or without a home there.","Regular","Beach, nightlife, dinner","Survey","Doubtful (check frequency)"],
+   ["Tourism","7","Experience tourism","Travels for experiences.","Sporadic","Experiences","Survey","Doubtful (check frequency)"],
+   ["Tourism","8","Couples","Escapade. The hotel weighs more.","Sporadic","Hotel, dinner","Survey","Can validate"],
+   ["Tourism","9","Regular foreigner, older","With or without a home there.","Regular","Hotel, golf, dinner","Outside survey","No answer yet"],
+   ["Tourism","10","Business","Regular without a home, or sporadic.","Regular or sporadic","Hotel","Outside survey","No answer yet"]];
+  var col={"Can validate":"#1d7a3a","Doubtful (check frequency)":"#a15c00","No answer yet":"#666"};
+  var h='<div class="card" style="margin-bottom:14px"><h3>The 10 personas, to get an idea</h3><p class="note">Work in progress, built after the interviews and the survey. “With home” means the person has a place to stay there (their own or a friend’s). Regularity comes from the survey frequency. The hotel ranking is used as a threshold. Survey sample: 303 answers, 98% Portuguese, 45% aged 18 to 24, 88% in summer.</p><div class="tablewrap"><table class="paytb"><thead><tr><th>Group</th><th>#</th><th>Persona</th><th>What we know</th><th>Regularity</th><th>Where we reach them</th><th>Source</th><th>Validation</th></tr></thead><tbody>'+
+   C.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td><b>'+r[2]+'</b></td><td>'+r[3]+'</td><td>'+r[4]+'</td><td>'+r[5]+'</td><td>'+r[6]+'</td><td style="color:'+col[r[7]]+'"><b>'+r[7]+'</b></td></tr>';}).join("")+'</tbody></table></div></div>';
+  h+=surveyPersonasHtml();
+  return h;
+}
+function surveyPersonasHtml(){
+  var all=complete(),THR=+(ST.hthr||5);
+  var REG=["3 to 4 times","5 times or more"];
+  function isReg(r){return REG.indexOf(P(r).frequency)>-1;}
+  function hrank(r){var v=cleanRank(P(r).vertical_rank),i=v.indexOf("Hotel");return i<0?null:i+1;}
+  function hasHome(r){var k=hrank(r);return k==null||k>=THR;}
+  function fam(r){return P(r).travelled_with_last_visit==="Family";}
+  function exp(r){return entryD(r)==="Culture and exploring"||P(r).entry_point==="Nature and wellness";}
+  function avgp(rs,f){var sc={};rs.forEach(function(r){var a=cleanRank(P(r)[f]);a.forEach(function(x,i){(sc[x]=sc[x]||[]).push(a.length-i);});});var o={};Object.keys(sc).forEach(function(k){o[k]=mean(sc[k]);});return o;}
+  function top(rs,f,L){var o=avgp(rs,f),k=Object.keys(o).sort(function(a,b){return o[b]-o[a];}).slice(0,3);return k.length?k.map(function(x){return esc(x)+" "+o[x].toFixed(1);}).join("<br>"):"-";}
+  function wtp(rs,q){var v=rs.map(function(r){var i=q.lab.indexOf(P(r)[q.f]);return i>-1?i+1:null;}).filter(function(x){return x!=null;});
+    if(!v.length)return "-";var m=mean(v);return m.toFixed(1)+" "+TIERS[Math.round(m)-1];}
+  function shr(rs,fn){return rs.length?Math.round(rs.filter(fn).length/rs.length*100)+"%":"-";}
+  function stats(rs){
+    if(!rs.length)return '<p class="note">Nobody in the survey.</p>';
+    var L=[["Regular (3+ visits)",shr(rs,isReg)],["Hotel ranked low (proxy for having a home)",shr(rs,hasHome)],["Aged 18 to 24",shr(rs,function(r){return AGEP(P(r).age)==="18 to 24";})],["Aged 25 to 54",shr(rs,function(r){return AGEP(P(r).age)==="25 to 54";})],["Aged 55 or older",shr(rs,function(r){return AGEP(P(r).age)==="55 or older";})],
+      ["Hotel in January (tier 1 to 5)",wtp(rs,WTPQ[0])],["Hotel in August (tier 1 to 5)",wtp(rs,WTPQ[1])],["Dinner per person (tier 1 to 5)",wtp(rs,WTPQ[2])],
+      ["Stay of 1 to 3 nights",shr(rs,function(r){return ["1 night","2 to 3 nights"].indexOf(P(r).nights_last_visit)>-1;})],["Stay of 8 nights or more",shr(rs,function(r){return ["8 to 14 nights","15 nights or more"].indexOf(P(r).nights_last_visit)>-1;})],
+      ["At least €22 for a meal out",shr(rs,function(r){return WTPQ[2].lab.indexOf(P(r)[WTPQ[2].f])>=2;})],["High-end price per night, January (tier 3+)",shr(rs,function(r){return WTPQ[0].lab.indexOf(P(r)[WTPQ[0].f])>=2;})],["High-end price per night, August (tier 3+)",shr(rs,function(r){return WTPQ[1].lab.indexOf(P(r)[WTPQ[1].f])>=2;})],
+      ["Entry points",(function(){var c={},n=0;rs.forEach(function(r){var e=entryD(r);if(e){c[e]=(c[e]||0)+1;n++;}});return Object.keys(c).sort(function(a,b){return c[b]-c[a];}).slice(0,3).map(function(k){return esc(k)+" "+Math.round(c[k]/n*100)+"%";}).join("<br>")||"-";})()],
+      ["Importance of verticals (average points, 8 = first)",(function(){var o=avgp(rs,"vertical_rank");return Object.keys(o).sort(function(a,b){return o[b]-o[a];}).map(function(k){return esc(k)+" "+o[k].toFixed(1);}).join("<br>");})()],
+      ["Top 3 verticals",top(rs,"vertical_rank",8)],["Top 3 mechanisms",top(rs,"mechanism_rank",9)],["Top 3 benefits",top(rs,"benefit_rank",11)]];
+    return '<table class="paytb"><tbody>'+L.map(function(x){return '<tr><td>'+x[0]+'</td><td>'+x[1]+'</td></tr>';}).join("")+'</tbody></table>'+(rs.length<20?'<p class="note" style="color:#a15c00">Under 20 people: hints only.</p>':'');}
+  var N=[],nid=0;
+  function mk(label,rs,kids,o){o=o||{};var n={id:nid++,label:label,rs:rs,kids:kids||[],out:o.out,txt:o.txt};N.push(n);return n;}
+  function home(rs){return [mk("With home",rs.filter(hasHome)),mk("Without home",rs.filter(function(r){return !hasHome(r);}))];}
+  function reg(rs){var a=rs.filter(isReg),b=rs.filter(function(r){return !isReg(r);});return [mk("Regular",a,home(a)),mk("Sporadic",b)];}
+  function pers(k,rs){return mk(k,rs,reg(rs));}
+  var f12=all.filter(function(r){return fam(r)&&famComp(r)!=="Children under 12";}),f5=all.filter(function(r){return fam(r)&&famComp(r)==="Children under 12";});
+  var sv=mk("Survey",all,[
+    mk("Family",all.filter(fam),[pers("Family, all 12+",f12),pers("Family, child under 12",f5)]),
+    pers("Friends, leisure",all.filter(function(r){var w=P(r).travelled_with_last_visit;return (w==="With friends"||w==="With a club or similar")&&!golfFocus(r);})),
+    pers("Experience tourism",all.filter(exp)),
+    pers("Couples",all.filter(function(r){return P(r).travelled_with_last_visit==="As a couple";}))]);
+  function ot(l,t){return mk(l,[],[],{out:1,txt:t});}
+  var outs=mk("Outside the survey",[],[ot("Golfer travelling","Alone, with friends or with family. Interviews only."),ot("Golfer near home","Alone or with partners. Very regular. Interviews only."),ot("Locals","Very regular, everyday perks. Interviews only."),ot("Regular foreigner, older","With or without a home. No survey data."),ot("Business","Regular without a home, or sporadic. No survey data.")],{out:1,txt:"Personas we know from interviews or other sources, not from the survey."});
+  var root=mk("All personas",[],[sv,outs],{out:1,txt:"Left: personas outside the survey. Right: the survey, which splits further."});
+  var CW=240,RH=40,leaf=0;
+  function lay(n,d){n.x=40+d*CW;if(!n.kids.length){n.y=24+RH*leaf++;}else{n.kids.forEach(function(k){lay(k,d+1);});n.y=(n.kids[0].y+n.kids[n.kids.length-1].y)/2;}}
+  lay(root,0);
+  var W=40+7*CW,H=24+RH*leaf,sv_="",PAL=["#AE8C44","#3F7F8C","#B5546A","#6B5BA6"];
+  function paint_(n,c){n.c=c;n.kids.forEach(function(k){paint_(k,c);});}
+  root.c="#5E5E5E";sv.c="#404041";outs.c="#8a8a8a";
+  sv.kids.forEach(function(k,i){paint_(k,PAL[i%4]);});outs.kids.forEach(function(k){paint_(k,"#8a8a8a");});
+  function rad(n){return n.out?8:Math.max(7,Math.min(22,4+Math.sqrt(n.rs.length)*1.4));}
+  N.forEach(function(n){n.kids.forEach(function(k){sv_+='<path d="M'+n.x+' '+n.y+' C'+(n.x+CW/2)+' '+n.y+' '+(k.x-CW/2)+' '+k.y+' '+k.x+' '+k.y+'" fill="none" stroke="'+k.c+'" stroke-opacity=".55" stroke-width="2.5"/>';});});
+  N.forEach(function(n){var r=rad(n),emp=!n.out&&!n.rs.length;sv_+='<g class="tn" data-tn="'+n.id+'" style="cursor:pointer"><circle cx="'+n.x+'" cy="'+n.y+'" r="'+r+'" fill="'+(n.out?"#fff":emp?"#f1f1f1":n.c)+'" stroke="'+n.c+'" stroke-width="2.5"/><text x="'+(n.x+r+8)+'" y="'+(n.y+5)+'" font-size="15" font-weight="600" fill="#2b2b2b" stroke="#fff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">'+esc(n.label)+(n.out?"":' <tspan font-weight="400" fill="#666">'+n.rs.length+'</tspan>')+'</text></g>';});
+  ST.tnodes=N;
+  var sel='<label>Hotel counts as “low” when ranked <select id="hthr">'+[3,4,5,6,7].map(function(k){return '<option value="'+k+'"'+(k===THR?' selected':'')+'>'+k+'th or lower (or not ranked)</option>';}).join("")+'</select> of 8</label>';
+  var z0=+(ST.tz||0.85);
+  setTimeout(function(){var sl=qs("#hthr");if(sl)sl.onchange=function(){ST.hthr=sl.value;mem("hthr",sl.value);paint();};
+    var sg=qs("#ptree svg"),pn=qs("#tpanel");
+    function zoom(z){z=Math.max(0.4,Math.min(2,z));ST.tz=z;if(sg){sg.setAttribute("width",W*z);sg.setAttribute("height",H*z);}}
+    zoom(z0);
+    var zi=qs("#tzi"),zo=qs("#tzo"),zr=qs("#tzr");if(zi)zi.onclick=function(){zoom(ST.tz*1.2);};if(zo)zo.onclick=function(){zoom(ST.tz/1.2);};if(zr)zr.onclick=function(){zoom(0.85);};
+    Array.prototype.forEach.call(document.querySelectorAll("#ptree .tn"),function(g){g.onclick=function(e){e.stopPropagation();var n=ST.tnodes[+g.getAttribute("data-tn")];pn.style.display="block";pn.innerHTML='<button class="btn sm" id="tpx" style="float:right">Close</button><h3 style="margin-top:0">'+esc(n.label)+(n.out?"":' <span class="tag">'+n.rs.length+' people</span>')+'</h3>'+(n.out?'<p class="note">'+esc(n.txt||"")+'</p>':stats(n.rs));qs("#tpx").onclick=function(){pn.style.display="none";};};});},0);
+  return '<div class="card"><h3>Persona tree</h3><p class="note">Each circle is a group; its size follows the number of people. Click a circle to see its profile. The survey splits by who they travelled with, then regular (3+ visits) or sporadic, then with or without a home. “With home” uses the hotel as a proxy: someone who ranks the hotel low among the 8 verticals probably already has somewhere to stay. Experience tourism = main reason is culture and exploring, or nature and wellness, and overlaps with the others. Open grey circles are personas outside the survey.</p><div class="filters">'+sel+'<span style="margin-left:auto"><button class="btn sm" id="tzo">−</button> <button class="btn sm" id="tzr">Reset</button> <button class="btn sm" id="tzi">+</button></span></div><div style="position:relative"><div id="ptree" style="overflow:auto;max-height:78vh;border:1px solid #ddd;border-radius:8px;background:#fff"><svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+sv_+'</svg></div><div id="tpanel" class="card" style="display:none;position:absolute;top:10px;right:10px;width:380px;max-width:90%;max-height:70vh;overflow:auto;box-shadow:0 6px 24px rgba(0,0,0,.2);z-index:5"></div></div></div>';
+}
 function personasView(v){
   var all=complete(),opt=POPTS[0];
   var asg=assignOpt(opt,all),k=opt.groups.length;
@@ -595,8 +671,11 @@ function personasView(v){
   var nav='<div class="filters" style="gap:6px;margin:6px 0 14px">'+tabs.map(function(x){return '<button class="btn sm'+(x[0]===sub?' pri':'')+'" data-ps="'+x[0]+'">'+x[1]+'</button>';}).join("")+'</div>';
   var chartsHtml='<p class="note">Same format as the Steering charts. Every chart can be changed (type, colours, size) and downloaded as PNG, SVG or CSV.</p><div class="grid ccg">'+SPECS.filter(function(x){return x.sec==="6. Personas, for the Steering"&&["pe_mix","pe_jan","pe_aug","pe_din","pe_mech_tier","pe_ben_tier"].indexOf(x.id)<0;}).map(function(x){return chartCard(x);}).join("")+'</div>';
   var ov=h.slice('<h2>Personas</h2>'.length);
-  h='<h2>Personas</h2>'+nav+(sub==="price"?pay:sub==="charts"?chartsHtml:sub==="stands"?sd:ov);
+  var ver=ST.pver==="old"?"old":"new";
+  var vnav='<div class="filters" style="gap:6px;margin:6px 0 10px"><button class="btn sm'+(ver==="new"?' pri':'')+'" data-pv="new">New structure (10 personas)</button><button class="btn sm'+(ver==="old"?' pri':'')+'" data-pv="old">Old version (5 personas)</button></div>';
+  h='<h2>Personas</h2>'+vnav+(ver==="new"?newPersonasHtml():nav+(sub==="price"?pay:sub==="charts"?chartsHtml:sub==="stands"?sd:ov));
   v.innerHTML=h;
+  Array.prototype.forEach.call(v.querySelectorAll("[data-pv]"),function(b){b.onclick=function(){ST.pver=b.getAttribute("data-pv");mem("pver",ST.pver);paint();};});
   ST.cx=personaCtx();Array.prototype.forEach.call(v.querySelectorAll(".cc"),function(c){bindChart(c);drawChart(c);});var mb=qs("#mxsvg"),ms=qs("#posmx");if(mb&&ms)mb.onclick=function(){var u=URL.createObjectURL(new Blob([ms.outerHTML],{type:"image/svg+xml"})),a=document.createElement("a");a.href=u;a.download="positioning-matrix.svg";document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(u);},500);};
   Array.prototype.forEach.call(v.querySelectorAll("[data-pc]"),function(c){c.onclick=function(){ST.psub="stands";mem("psub","stands");paint();window.scrollTo(0,0);};});
   Array.prototype.forEach.call(v.querySelectorAll("[data-ps]"),function(b){b.onclick=function(){ST.psub=b.getAttribute("data-ps");mem("psub",ST.psub);paint();};});
