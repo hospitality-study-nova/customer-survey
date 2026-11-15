@@ -143,7 +143,7 @@ if(!C.SUPABASE_URL||!C.SUPABASE_ANON_KEY||!window.supabase){
 }
 var sb=window.supabase.createClient(C.SUPABASE_URL,C.SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
 function mem(k,v){try{if(v===undefined)return localStorage.getItem("adm_"+k);localStorage.setItem("adm_"+k,v);}catch(e){return null;}}
-var ST={tab:mem("tab")||"overview",mtab:mem("mtab")||undefined,psub:mem("psub")||"overview",pver:mem("pver")||"new",hthr:mem("hthr")||"5",rows:[],filter:"all",user:null,detail:null,loaded:false,err:null};
+var ST={tab:mem("tab")||"overview",mtab:mem("mtab")||undefined,psub:mem("psub")||"overview",pver:mem("pver")||"new",hthr:mem("hthr")||"5",rthr:mem("rthr")||"3",rows:[],filter:"all",user:null,detail:null,loaded:false,err:null};
 
 /* ---------- questionnaire link ---------- */
 function formUrl(){return C.SITE_URL||new URL("./",location.href).href;}
@@ -547,8 +547,8 @@ function newPersonasHtml(){
 }
 function surveyPersonasHtml(){
   var all=complete(),THR=+(ST.hthr||5);
-  var REG=["3 to 4 times","5 times or more"];
-  function isReg(r){return REG.indexOf(P(r).frequency)>-1;}
+  var FQ=["1 time","2 times","3 to 4 times","5 times or more"],RT=+(ST.rthr||3);
+  function isReg(r){return FQ.indexOf(P(r).frequency)+1>=RT;}
   function hrank(r){var v=cleanRank(P(r).vertical_rank),i=v.indexOf("Hotel");return i<0?null:i+1;}
   function hasHome(r){var k=hrank(r);return k==null||k>=THR;}
   function fam(r){return P(r).travelled_with_last_visit==="Family";}
@@ -560,7 +560,7 @@ function surveyPersonasHtml(){
   function shr(rs,fn){return rs.length?Math.round(rs.filter(fn).length/rs.length*100)+"%":"-";}
   function stats(rs){
     if(!rs.length)return '<p class="note">Nobody in the survey.</p>';
-    var L=[["Regular (3+ visits)",shr(rs,isReg)],["Hotel ranked low (proxy for having a home)",shr(rs,hasHome)],["Aged 18 to 24",shr(rs,function(r){return AGEP(P(r).age)==="18 to 24";})],["Aged 25 to 54",shr(rs,function(r){return AGEP(P(r).age)==="25 to 54";})],["Aged 55 or older",shr(rs,function(r){return AGEP(P(r).age)==="55 or older";})],
+    var L=[["Regular ("+FQN[RT]+")",shr(rs,isReg)],["Hotel ranked low (proxy for having a home)",shr(rs,hasHome)],["Aged 18 to 24",shr(rs,function(r){return AGEP(P(r).age)==="18 to 24";})],["Aged 25 to 54",shr(rs,function(r){return AGEP(P(r).age)==="25 to 54";})],["Aged 55 or older",shr(rs,function(r){return AGEP(P(r).age)==="55 or older";})],
       ["Hotel in January (tier 1 to 5)",wtp(rs,WTPQ[0])],["Hotel in August (tier 1 to 5)",wtp(rs,WTPQ[1])],["Dinner per person (tier 1 to 5)",wtp(rs,WTPQ[2])],
       ["Stay of 1 to 3 nights",shr(rs,function(r){return ["1 night","2 to 3 nights"].indexOf(P(r).nights_last_visit)>-1;})],["Stay of 8 nights or more",shr(rs,function(r){return ["8 to 14 nights","15 nights or more"].indexOf(P(r).nights_last_visit)>-1;})],
       ["At least €22 for a meal out",shr(rs,function(r){return WTPQ[2].lab.indexOf(P(r)[WTPQ[2].f])>=2;})],["High-end price per night, January (tier 3+)",shr(rs,function(r){return WTPQ[0].lab.indexOf(P(r)[WTPQ[0].f])>=2;})],["High-end price per night, August (tier 3+)",shr(rs,function(r){return WTPQ[1].lab.indexOf(P(r)[WTPQ[1].f])>=2;})],
@@ -568,6 +568,7 @@ function surveyPersonasHtml(){
       ["Importance of verticals (average points, 8 = first)",(function(){var o=avgp(rs,"vertical_rank");return Object.keys(o).sort(function(a,b){return o[b]-o[a];}).map(function(k){return esc(k)+" "+o[k].toFixed(1);}).join("<br>");})()],
       ["Top 3 verticals",top(rs,"vertical_rank",8)],["Top 3 mechanisms",top(rs,"mechanism_rank",9)],["Top 3 benefits",top(rs,"benefit_rank",11)]];
     return '<table class="paytb"><tbody>'+L.map(function(x){return '<tr><td>'+x[0]+'</td><td>'+x[1]+'</td></tr>';}).join("")+'</tbody></table>'+(rs.length<20?'<p class="note" style="color:#a15c00">Under 20 people: hints only.</p>':'');}
+  var FQN={2:"2 or more visits",3:"3 or more visits",4:"5 or more visits"};
   var N=[],nid=0;
   function mk(label,rs,kids,o){o=o||{};var n={id:nid++,label:label,rs:rs,kids:kids||[],out:o.out,txt:o.txt};N.push(n);return n;}
   function flav(rs,seasonal){
@@ -608,8 +609,8 @@ function surveyPersonasHtml(){
   N.forEach(function(n){n.kids.forEach(function(k){sv_+='<path d="M'+n.x+' '+n.y+' C'+(n.x+CW/2)+' '+n.y+' '+(k.x-CW/2)+' '+k.y+' '+k.x+' '+k.y+'" fill="none" stroke="'+k.c+'" stroke-opacity=".55" stroke-width="2.5"/>';});});
   N.forEach(function(n){var r=rad(n),emp=!n.out&&!n.rs.length;sv_+='<g class="tn" data-tn="'+n.id+'" style="cursor:pointer"><circle cx="'+n.x+'" cy="'+n.y+'" r="'+r+'" fill="'+(n.out?"#fff":emp?"#f1f1f1":n.c)+'" stroke="'+n.c+'" stroke-width="2.5"/><text x="'+(n.x+r+7)+'" y="'+(n.y+5)+'" font-size="14" font-weight="600" fill="#2b2b2b" stroke="#fff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">'+esc(n.label)+(n.out?"":' <tspan font-weight="400" fill="#666">'+n.rs.length+'</tspan>')+'</text></g>';});
   ST.tnodes=N;
-  var sel='<label>Hotel counts as “low” when ranked <select id="hthr">'+[3,4,5,6,7].map(function(k){return '<option value="'+k+'"'+(k===THR?' selected':'')+'>'+k+'th or lower (or not ranked)</option>';}).join("")+'</select> of 8</label>';
-  setTimeout(function(){var sl=qs("#hthr");if(sl)sl.onchange=function(){ST.hthr=sl.value;mem("hthr",sl.value);paint();};
+  var sel='<label>Regular means <select id="rthr">'+[[2,"2 or more visits (sporadic = 1 visit)"],[3,"3 or more visits (sporadic = 1 to 2)"],[4,"5 or more visits (sporadic = 1 to 4)"]].map(function(o){return '<option value="'+o[0]+'"'+(o[0]===RT?' selected':'')+'>'+o[1]+'</option>';}).join("")+'</select></label> <label>Hotel counts as “low” when ranked <select id="hthr">'+[3,4,5,6,7].map(function(k){return '<option value="'+k+'"'+(k===THR?' selected':'')+'>'+k+'th or lower (or not ranked)</option>';}).join("")+'</select> of 8</label>';
+  setTimeout(function(){var sl=qs("#hthr");if(sl)sl.onchange=function(){ST.hthr=sl.value;mem("hthr",sl.value);paint();};var rl=qs("#rthr");if(rl)rl.onchange=function(){ST.rthr=rl.value;mem("rthr",rl.value);paint();};
     var sg=qs("#ptree svg"),pn=qs("#tpanel"),wrap=qs("#ptree");
     function fit(){var cw=wrap?wrap.clientWidth-4:W,vh=Math.max(420,window.innerHeight-230);return Math.max(0.3,Math.min(1.3,cw/W,vh/H));}
     function zoom(z,user){z=Math.max(0.3,Math.min(2.2,z));ST.tz=z;if(user)ST.tzu=1;if(sg){sg.setAttribute("width",W*z);sg.setAttribute("height",H*z);}}
@@ -618,7 +619,7 @@ function surveyPersonasHtml(){
     function show(n){pn.innerHTML='<h3 style="margin-top:0">'+esc(n.label)+(n.out?"":' <span class="tag">'+n.rs.length+' people</span>')+'</h3>'+(n.out?'<p class="note">'+esc(n.txt||"")+'</p>':stats(n.rs));}
     show(root);
     Array.prototype.forEach.call(document.querySelectorAll("#ptree .tn"),function(g){g.onclick=function(e){e.stopPropagation();show(ST.tnodes[+g.getAttribute("data-tn")]);};});},0);
-  return '<div class="card"><h3>Persona tree</h3><p class="note">Each circle is a group; its size follows the number of people. Click a circle to see its profile on the right. The survey splits by who they travelled with (Family +12 and \u221212, Friends, Couple), then regular with a home, regular, sporadic (and seasonal for couples). “With home” uses the hotel as a proxy: someone who ranks the hotel low among the 8 verticals probably already has somewhere to stay. Open grey circles are personas outside the survey. The whole tree fits the screen at first; use + and − to zoom.</p><div class="filters">'+sel+'<span style="margin-left:auto"><button class="btn sm" id="tzo">−</button> <button class="btn sm" id="tzr">Fit</button> <button class="btn sm" id="tzi">+</button></span></div><div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap"><div id="ptree" style="flex:1 1 560px;min-width:0;overflow:auto;border:1px solid #ddd;border-radius:8px;background:#fff"><svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+sv_+'</svg></div><div id="tpanel" style="flex:0 0 340px;max-width:100%;max-height:calc(100vh - 230px);min-height:200px;overflow:auto;border:1px solid #ddd;border-radius:8px;padding:12px 14px;background:#fff"></div></div></div>';
+  return '<div class="card"><h3>Persona tree</h3><p class="note">Each circle is a group; its size follows the number of people. Click a circle to see its profile on the right. The survey splits by who they travelled with (Family +12 and \u221212, Friends, Couple), then regular with a home, regular, sporadic (and seasonal for couples). Use the two selectors to change what counts as regular (number of visits) and as having a home (hotel rank); the default is 3 or more visits and hotel ranked 5th or lower. “With home” uses the hotel as a proxy: someone who ranks the hotel low among the 8 verticals probably already has somewhere to stay. Open grey circles are personas outside the survey. The whole tree fits the screen at first; use + and − to zoom.</p><div class="filters">'+sel+'<span style="margin-left:auto"><button class="btn sm" id="tzo">−</button> <button class="btn sm" id="tzr">Fit</button> <button class="btn sm" id="tzi">+</button></span></div><div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap"><div id="ptree" style="flex:1 1 560px;min-width:0;overflow:auto;border:1px solid #ddd;border-radius:8px;background:#fff"><svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'+sv_+'</svg></div><div id="tpanel" style="flex:0 0 340px;max-width:100%;max-height:calc(100vh - 230px);min-height:200px;overflow:auto;border:1px solid #ddd;border-radius:8px;padding:12px 14px;background:#fff"></div></div></div>';
 }
 function personasView(v){
   var all=complete(),opt=POPTS[0];
