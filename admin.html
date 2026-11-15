@@ -190,9 +190,17 @@ sb.auth.onAuthStateChange(function(ev){if(ev==="SIGNED_IN"&&!ST.user)boot();});
 
 function shell(){
   app.innerHTML='<header class="top"><div class="wrap"><div class="bar"><h1>Customer Survey<small>Private team area</small></h1>'+
-   '<button class="btn pri sm" id="clink">Copy questionnaire link</button><a class="btn sm" id="tst" href="'+esc(formUrl()+'?test=1')+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Test survey (nothing is saved)</a><button class="btn sm" id="out">Sign out</button></div>'+
+   '<button class="btn pri sm" id="clink">Copy questionnaire link</button><a class="btn sm" id="tst" href="'+esc(formUrl()+'?test=1')+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">Test survey (nothing is saved)</a><button class="btn sm" id="sv" title="Open or close the questionnaire to new answers">Survey: …</button><button class="btn sm" id="out">Sign out</button></div>'+
    '<nav class="tabs"><button data-t="overview">Overview</button><button data-t="steering">Steering charts</button><button data-t="segments">Segments</button><button data-t="personas">Personas</button><button data-t="responses">Responses</button><button data-t="method">Methodology</button></nav></div></header><main><div class="wrap" id="view"></div></main><div id="mod"></div>';
   qs("#clink").onclick=function(){copyText(formUrl(),this);};
+  (function(){var bt=qs("#sv");
+    function show(o){bt.setAttribute("data-open",o?"1":"0");bt.textContent=o?"Survey: open (click to close)":"Survey: CLOSED (click to open)";bt.style.background=o?"":"#8a1c1c";bt.style.color=o?"":"#fff";}
+    sb.from("survey_settings").select("is_open").eq("id",1).maybeSingle().then(function(r){if(r.error||!r.data){bt.textContent="Survey: run supabase_survey_switch.sql";bt.disabled=true;return;}show(r.data.is_open);});
+    bt.onclick=function(){var o=bt.getAttribute("data-open")==="1";
+      if(!window.confirm(o?"Close the survey? New visitors will see a closed page and new answers are refused. Answers already started can still be finished.":"Open the survey again to new answers?"))return;
+      bt.disabled=true;
+      sb.from("survey_settings").update({is_open:!o,updated_at:new Date().toISOString(),updated_by:(ST.user&&ST.user.email)||null}).eq("id",1).select("is_open").then(function(r){bt.disabled=false;if(r.error||!r.data||!r.data.length){window.alert("Could not change it: "+(r.error?r.error.message:"no permission"));return;}show(r.data[0].is_open);});};
+  })();
   qs("#out").onclick=function(){sb.auth.signOut().then(function(){ST.user=null;ST.loaded=false;loginView();});};
   Array.prototype.forEach.call(document.querySelectorAll("nav.tabs button"),function(b){b.onclick=function(){ST.tab=b.getAttribute("data-t");paint();};});
   paint();

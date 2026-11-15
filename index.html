@@ -531,6 +531,11 @@ PATS.push([/^How many times did you go to (.+) in the last 3 years\?$/,"Quantas 
  [/^For example: (.+) plus two other activities, with benefits shared across them$/,function(m,a){return "Por exemplo: "+ptAct(a)+" e mais duas atividades, com benefícios partilhados entre elas";}],
  [/^Everything stays within (.+)$/,"Tudo fica em $1"],[/^(.+) and nearby towns and attractions$/,"$1 e as localidades e atrações próximas"]);
 var MISS=[];window.__miss=MISS;window.__PTD=PTD;
+function checkOpen(){
+  if(!CONFIG.SUPABASE_URL||TEST)return;
+  fetch(CONFIG.SUPABASE_URL+"/rest/v1/survey_settings?select=is_open&id=eq.1",{headers:{apikey:CONFIG.SUPABASE_ANON_KEY,Authorization:(/^eyJ/.test(CONFIG.SUPABASE_ANON_KEY)?"Bearer "+CONFIG.SUPABASE_ANON_KEY:undefined)}})
+   .then(function(r){return r.ok?r.json():[];}).then(function(rows){if(rows&&rows[0]&&rows[0].is_open===false){S.closed=true;render();}}).catch(function(){});
+}
 function loadOverrides(){
   if(!CONFIG.SUPABASE_URL)return;
   var ctl=window.AbortController?new AbortController():null;var to=setTimeout(function(){if(ctl)ctl.abort();},4000);
@@ -908,7 +913,9 @@ function act(){lastAct=Date.now();moreUpdate();}
 setInterval(moreUpdate,700);
 window.addEventListener("resize",moreUpdate);
 try{new ResizeObserver(moreUpdate).observe(main);}catch(e){}
+function closedHtml(){var pt=S.lang==="pt";return '<section style="max-width:560px;margin:12vh auto;padding:32px 24px;text-align:center"><h2 style="margin:0 0 12px">'+(pt?"Este estudo já está encerrado":"This study is now closed")+'</h2><p>'+(pt?"Obrigado pelo interesse. Já não estamos a receber respostas.":"Thank you for your interest. We are no longer collecting answers.")+'</p></section>';}
 function render(keepScroll){
+  if(S.closed&&!TEST){main.setAttribute("data-step","closed");main.className="";main.innerHTML=closedHtml();return;}
   var y=window.pageYOffset;var st=S.end?END:stepById(S.cur);
   main.setAttribute("data-step",S.end?"end":S.cur);
   main.innerHTML=st.html()+(st.raw?"":modalHTML());
@@ -1109,7 +1116,7 @@ function submit(){
 }
 S.resume=loadSaved();if(S.resume)S.lang=S.resume.lang;
 document.addEventListener("input",saveProgress);
-render();loadOverrides();
+render();loadOverrides();checkOpen();
 })();
 </script>
 
